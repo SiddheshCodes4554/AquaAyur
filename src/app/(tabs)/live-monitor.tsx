@@ -110,7 +110,7 @@ export default function LiveMonitorScreen() {
                 <Text className="text-white text-5xl font-black font-mono tracking-tight">
                   {liveData?.heartRate || '--'}
                 </Text>
-                <Text className="text-rose-450 font-bold text-xs uppercase tracking-wider font-mono mt-1">bpm</Text>
+                <Text className="text-rose-400 font-bold text-xs uppercase tracking-wider font-mono mt-1">bpm</Text>
 
                 <View className="border-t border-[#1f372f]/45 pt-4 mt-5 w-full items-center">
                   <Text className="text-slate-350 text-[10px]">Ayurvedic State Classification</Text>
@@ -141,7 +141,7 @@ export default function LiveMonitorScreen() {
                             style={{ height: `${heightPercent}%` }}
                             className="w-full bg-emerald-500 rounded-t-sm"
                           />
-                          <Text className="text-emerald-450/40 text-[7px] mt-1 font-mono">
+                          <Text className="text-emerald-400/40 text-[7px] mt-1 font-mono">
                             {val}
                           </Text>
                         </View>

@@ -46,7 +46,7 @@ export default function AyurExplanationSheet({ visible, onClose, context }: Ayur
           {/* Header */}
           <View className="flex-row justify-between items-start mb-5">
             <View className="flex-1 pr-4">
-              <Text className="text-emerald-450 text-[10px] uppercase font-bold tracking-wider">Ayurvedic Reasonings</Text>
+              <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider">Ayurvedic Reasonings</Text>
               <Text className="text-white text-lg font-bold mt-0.5">{context.recommendationTitle}</Text>
             </View>
             <TouchableOpacity 
@@ -68,7 +68,7 @@ export default function AyurExplanationSheet({ visible, onClose, context }: Ayur
               <View className="flex-row flex-wrap gap-2">
                 {context.sensorDataUsed.map((data, idx) => (
                   <View key={idx} className="bg-emerald-950/50 border border-emerald-900/30 px-3 py-1.5 rounded-xl">
-                    <Text className="text-emerald-250 text-[10px] font-mono font-medium">{data}</Text>
+                    <Text className="text-emerald-300 text-[10px] font-mono font-medium">{data}</Text>
                   </View>
                 ))}
               </View>
@@ -91,11 +91,11 @@ export default function AyurExplanationSheet({ visible, onClose, context }: Ayur
               </Text>
               <View className="flex-row space-x-3">
                 <View className="flex-1 bg-emerald-950/50 border border-emerald-900/30 p-3 rounded-xl items-center">
-                  <Text className="text-emerald-450/60 text-[8px] uppercase font-bold tracking-wider">Active Dosha</Text>
+                  <Text className="text-emerald-400/60 text-[8px] uppercase font-bold tracking-wider">Active Dosha</Text>
                   <Text className="text-white text-xs font-bold text-center mt-1">{context.dosha}</Text>
                 </View>
                 <View className="flex-1 bg-emerald-950/50 border border-emerald-900/30 p-3 rounded-xl items-center">
-                  <Text className="text-emerald-450/60 text-[8px] uppercase font-bold tracking-wider">Active Agni</Text>
+                  <Text className="text-emerald-400/60 text-[8px] uppercase font-bold tracking-wider">Active Agni</Text>
                   <Text className="text-white text-xs font-bold text-center mt-1">{context.agni}</Text>
                 </View>
               </View>

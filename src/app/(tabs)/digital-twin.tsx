@@ -20,6 +20,7 @@ import { getExplanationForRecommendation, ExplanationContext } from '../../servi
 import { runLifestyleSimulation, SimulatedHabits } from '../../services/lifestyleSimEngine';
 
 const AnimatedG = Animated.createAnimatedComponent(G);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 type TwinTab = 'balance' | 'doshas' | 'indices' | 'simulate';
 
@@ -296,22 +297,42 @@ export default function DigitalTwinScreen() {
   // Set up listeners for the animated points to build dynamic SVG attributes
   const [polyPoints, setPolyPoints] = useState('150,50 250,200 50,200');
   useEffect(() => {
+    const currentValues = {
+      vY: 150 - (30 + (vata / 100) * 100),
+      pX: 150 + (30 + (pitta / 100) * 100) * Math.cos(Math.PI / 6),
+      pY: 150 + (30 + (pitta / 100) * 100) * Math.sin(Math.PI / 6),
+      kX: 150 + (30 + (kapha / 100) * 100) * Math.cos(5 * Math.PI / 6),
+      kY: 150 + (30 + (kapha / 100) * 100) * Math.sin(5 * Math.PI / 6),
+    };
+
     const updatePoints = () => {
-      const vYVal = (vataY as any)._value;
-      const pXVal = (pittaX as any)._value;
-      const pYVal = (pittaY as any)._value;
-      const kXVal = (kaphaX as any)._value;
-      const kYVal = (kaphaY as any)._value;
-      setPolyPoints(`150,${vYVal} ${pXVal},${pYVal} ${kXVal},${kYVal}`);
+      setPolyPoints(`150,${currentValues.vY} ${currentValues.pX},${currentValues.pY} ${currentValues.kX},${currentValues.kY}`);
     };
 
     const listeners = [
-      vataY.addListener(updatePoints),
-      pittaX.addListener(updatePoints),
-      pittaY.addListener(updatePoints),
-      kaphaX.addListener(updatePoints),
-      kaphaY.addListener(updatePoints),
+      vataY.addListener(({ value }) => {
+        currentValues.vY = value;
+        updatePoints();
+      }),
+      pittaX.addListener(({ value }) => {
+        currentValues.pX = value;
+        updatePoints();
+      }),
+      pittaY.addListener(({ value }) => {
+        currentValues.pY = value;
+        updatePoints();
+      }),
+      kaphaX.addListener(({ value }) => {
+        currentValues.kX = value;
+        updatePoints();
+      }),
+      kaphaY.addListener(({ value }) => {
+        currentValues.kY = value;
+        updatePoints();
+      }),
     ];
+
+    updatePoints();
 
     return () => {
       vataY.removeListener(listeners[0]);
@@ -320,7 +341,7 @@ export default function DigitalTwinScreen() {
       kaphaX.removeListener(listeners[3]);
       kaphaY.removeListener(listeners[4]);
     };
-  }, []);
+  }, [vata, pitta, kapha]);
 
   // Simulator helper: inserts raw data & triggers recalculations
   const handleSimulateTelemetry = async () => {
@@ -481,20 +502,20 @@ export default function DigitalTwinScreen() {
                 {/* Vertex Label Points */}
                 {/* Vata (Air/Ether) Top Node */}
                 <G>
-                  <Circle cx="150" cy={(vataY as any)._value} r="8" fill="#020b08" stroke="#38bdf8" strokeWidth="2.5" />
-                  <Circle cx="150" cy={(vataY as any)._value} r="18" fill="rgba(56, 189, 248, 0.08)" />
+                  <AnimatedCircle cx="150" cy={vataY} r="8" fill="#020b08" stroke="#38bdf8" strokeWidth={2.5} />
+                  <AnimatedCircle cx="150" cy={vataY} r="18" fill="rgba(56, 189, 248, 0.08)" />
                 </G>
 
                 {/* Pitta (Fire/Water) Bottom-Right Node */}
                 <G>
-                  <Circle cx={(pittaX as any)._value} cy={(pittaY as any)._value} r="8" fill="#020b08" stroke="#fb923c" strokeWidth="2.5" />
-                  <Circle cx={(pittaX as any)._value} cy={(pittaY as any)._value} r="18" fill="rgba(251, 146, 60, 0.08)" />
+                  <AnimatedCircle cx={pittaX} cy={pittaY} r="8" fill="#020b08" stroke="#fb923c" strokeWidth={2.5} />
+                  <AnimatedCircle cx={pittaX} cy={pittaY} r="18" fill="rgba(251, 146, 60, 0.08)" />
                 </G>
 
                 {/* Kapha (Earth/Water) Bottom-Left Node */}
                 <G>
-                  <Circle cx={(kaphaX as any)._value} cy={(kaphaY as any)._value} r="8" fill="#020b08" stroke="#34d399" strokeWidth="2.5" />
-                  <Circle cx={(kaphaX as any)._value} cy={(kaphaY as any)._value} r="18" fill="rgba(52, 211, 153, 0.08)" />
+                  <AnimatedCircle cx={kaphaX} cy={kaphaY} r="8" fill="#020b08" stroke="#34d399" strokeWidth={2.5} />
+                  <AnimatedCircle cx={kaphaX} cy={kaphaY} r="18" fill="rgba(52, 211, 153, 0.08)" />
                 </G>
 
                 {/* CENTRAL AGNI FLAME CORE */}

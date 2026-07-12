@@ -12,7 +12,6 @@ import {
   Animated,
   Easing
 } from 'react-native';
-import { Svg, Circle } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,12 +25,12 @@ type ConsultationPhase = 'morning' | 'afternoon' | 'evening' | 'weekly' | 'month
 export default function CoachScreen() {
   const { user } = useAuthStore();
   
+  const [subTab, setSubTab] = useState<'assessment' | 'chat'>('assessment');
   const [activePhase, setActivePhase] = useState<ConsultationPhase>('morning');
   const [consultation, setConsultation] = useState<PhysicianConsultation | null>(null);
   const [loading, setLoading] = useState(false);
   
   // Follow up Chat states
-  const [showFollowUp, setShowFollowUp] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatHistoryRecord[]>([]);
   const [inputText, setInputText] = useState('');
   const [thinking, setThinking] = useState(false);
@@ -117,10 +116,11 @@ export default function CoachScreen() {
   };
 
   useEffect(() => {
-    if (showFollowUp) {
+    if (subTab === 'chat') {
       fetchChatHistory();
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);
     }
-  }, [showFollowUp]);
+  }, [subTab]);
 
   // Handle follow up send
   const handleSendMessage = async () => {
@@ -131,6 +131,7 @@ export default function CoachScreen() {
     const newUserMsg: ChatHistoryRecord = { sender: 'user', message_text: text };
     setChatMessages(prev => [...prev, newUserMsg]);
     setThinking(true);
+    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 50);
 
     try {
       // 1. Log User message
@@ -180,6 +181,7 @@ export default function CoachScreen() {
         colors={['#022c22', '#01140f']}
         style={{ flex: 1 }}
       >
+        {/* Header */}
         <View className="px-5 pt-4 pb-3 border-b border-emerald-950 flex-row justify-between items-center">
           <View>
             <Text className="text-white text-lg font-black tracking-wide">AquaGuru Physician</Text>
@@ -190,243 +192,232 @@ export default function CoachScreen() {
           </View>
         </View>
 
-        {/* Dynamic Consult Phase Tab Selectors */}
-        <View className="px-4 py-3 bg-emerald-950/20 border-b border-emerald-900/10">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 10 }} className="flex-row">
-            {(['morning', 'afternoon', 'evening', 'weekly', 'monthly'] as ConsultationPhase[]).map((phase) => {
-              const isSelected = activePhase === phase;
-              const label = phase === 'morning' ? 'Morning' : phase === 'afternoon' ? 'Midday' : phase === 'evening' ? 'Evening' : phase === 'weekly' ? 'Weekly' : 'Monthly';
-              return (
-                <TouchableOpacity
-                  key={phase}
-                  onPress={() => setActivePhase(phase)}
-                  className={`px-4 py-2 rounded-xl mr-2 border ${
-                    isSelected 
-                      ? 'bg-emerald-500 border-emerald-400' 
-                      : 'bg-emerald-950/40 border-emerald-900/30'
-                  }`}
-                >
-                  <Text className={`text-[10px] font-bold ${isSelected ? 'text-emerald-950' : 'text-emerald-400'}`}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+        {/* Subtab Segment Control */}
+        <View className="flex-row p-1.5 bg-[#051a14]/60 border-b border-emerald-950/50">
+          <TouchableOpacity
+            onPress={() => setSubTab('assessment')}
+            className={`flex-1 py-2 rounded-xl items-center justify-center ${subTab === 'assessment' ? 'bg-[#10b981]/15 border border-[#10b981]/30' : 'opacity-60'}`}
+          >
+            <Text className="text-white text-xs font-serif font-black">Physician Assessment</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setSubTab('chat')}
+            className={`flex-1 py-2 rounded-xl items-center justify-center ${subTab === 'chat' ? 'bg-[#10b981]/15 border border-[#10b981]/30' : 'opacity-60'}`}
+          >
+            <Text className="text-white text-xs font-serif font-black">AquaGuru Chatbot</Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView className="flex-1 px-5 pt-4" contentContainerStyle={{ paddingBottom: 85 }}>
-          {loading ? (
-            <View className="flex-1 py-20 items-center justify-center">
-              <ActivityIndicator size="large" color="#10b981" />
-              <Text className="text-emerald-400 text-xs font-medium mt-4">Compiling physician's assessment...</Text>
-            </View>
-          ) : consultation ? (
-            <View className="space-y-5">
-              
-              {/* Prescription Sheet Card */}
-              <View className="bg-[#051f18]/30 border-2 border-emerald-800/30 p-6 rounded-3xl relative overflow-hidden">
-                <View className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-emerald-500/5 rounded-full pointer-events-none" />
-                
-                {/* Header */}
-                <View className="border-b border-emerald-850/40 pb-4 mb-4 flex-row justify-between items-start">
-                  <View>
-                    <Text className="text-white text-base font-extrabold">{getPhaseTitle(consultation.phase)}</Text>
-                    <Text className="text-emerald-400/50 text-[10px] mt-0.5 font-mono">B.A.M.S. Certified Counselor</Text>
-                  </View>
-                  <View className="bg-emerald-950/60 border border-emerald-900/40 px-2.5 py-0.5 rounded-full">
-                    <Text className="text-emerald-400 text-[8px] font-mono uppercase">State: {consultation.dominantDoshaLabel}</Text>
-                  </View>
-                </View>
-
-                {/* Assessment text */}
-                <View className="mb-6">
-                  <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-widest mb-1.5">Physician's Assessment</Text>
-                  <Text className="text-emerald-100 text-xs italic leading-relaxed pl-3 border-l-2 border-emerald-500">
-                    "{consultation.assessment}"
-                  </Text>
-                </View>
-
-                {/* Prescriptions Grid */}
-                <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-widest mb-3">Therapeutic Prescriptions</Text>
-                <View className="space-y-3">
-                  {consultation.prescriptions.map((pres, idx) => (
-                    <View key={idx} className="bg-emerald-950/30 border border-emerald-900/20 p-4 rounded-2xl">
-                      <View className="flex-row justify-between items-center mb-1.5">
-                        <Text className="text-white text-xs font-bold">{pres.instruction}</Text>
-                        <View className="bg-emerald-500/10 border border-emerald-500/35 px-2 py-0.5 rounded">
-                          <Text className="text-emerald-400 text-[8px] font-bold uppercase">{pres.category}</Text>
-                        </View>
-                      </View>
-                      <Text className="text-slate-300 text-[10px] leading-relaxed font-sans">
-                        Rationale: {pres.rationale}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Diagnostic Indexes used */}
-                <View className="mt-6 pt-4 border-t border-emerald-850/40 flex-row justify-between items-center">
-                  <View>
-                    <Text className="text-emerald-400/50 text-[8px] font-mono uppercase">Digestion Index: {consultation.agniClassification}</Text>
-                    <Text className="text-emerald-400/50 text-[8px] font-mono uppercase mt-0.5">Immunity Index: {consultation.ojasClassification}</Text>
-                  </View>
-                  <Ionicons name="finger-print-outline" size={16} color="#047857" />
-                </View>
-              </View>
-
-              {/* Clinical Evidence badges */}
-              <View className="bg-[#051f18]/30 border border-emerald-800/20 p-5 rounded-2xl">
-                <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-3">Referenced Biometrics</Text>
-                <View className="flex-row flex-wrap">
-                  {consultation.vitalMetricsUsed.map((metric, idx) => (
-                    <View key={idx} className="bg-emerald-950/40 border border-emerald-900/30 px-3 py-2 rounded-xl mr-2 mb-2 flex-row items-center">
-                      <View className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-2" />
-                      <Text className="text-emerald-300 text-[10px] font-medium mr-1.5">{metric.label}:</Text>
-                      <Text className="text-white text-[10px] font-bold font-mono">{metric.value}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-
-            </View>
-          ) : (
-            <View className="py-20 items-center justify-center">
-              <Text className="text-emerald-400/50 text-xs italic">No consultation records available today.</Text>
-            </View>
-          )}
-        </ScrollView>
-
-        {/* Floating Proactive Follow-up Button */}
-        <TouchableOpacity
-          onPress={() => setShowFollowUp(true)}
-          activeOpacity={0.85}
-          className="absolute bottom-6 left-5 right-5 bg-emerald-500 py-3.5 rounded-2xl flex-row justify-center items-center active:bg-emerald-600 shadow-lg shadow-emerald-500/20"
-        >
-          <Ionicons name="chatbubble-ellipses-outline" size={16} color="#022c22" style={{ marginRight: 8 }} />
-          <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">Ask Follow-up Question</Text>
-        </TouchableOpacity>
-
-        {/* FOLLOW-UP CHAT DIALOGUE MODAL */}
-        <Modal
-          visible={showFollowUp}
-          animationType="slide"
-          transparent={false}
-          onRequestClose={() => setShowFollowUp(false)}
-        >
-          <SafeAreaView className="flex-1 bg-[#091310]">
-            <LinearGradient
-              colors={['#091310', '#111d19']}
-              style={{ flex: 1 }}
-            >
-              {/* Modal Header */}
-              <View className="px-5 py-4 border-b border-[#1f372f] flex-row justify-between items-center bg-[#111d19]/80">
-                <View className="flex-row items-center">
-                  <View className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2.5 shadow shadow-emerald-500/50" />
-                  <View>
-                    <Text className="text-white text-base font-serif font-black">Dr. AquaGuru</Text>
-                    <Text className="text-emerald-400 text-[8px] uppercase font-bold tracking-widest font-mono">Grounded Ayurvedic Counselor</Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  onPress={() => setShowFollowUp(false)}
-                  className="w-8 h-8 rounded-lg bg-[#172722] border border-[#1f372f] items-center justify-center active:bg-emerald-900/20"
-                >
-                  <Ionicons name="close" size={18} color="#34d399" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Chat messages */}
-              <ScrollView 
-                ref={scrollViewRef}
-                className="flex-1 px-5 pt-4"
-                contentContainerStyle={{ paddingBottom: 20 }}
-              >
-                {chatMessages.map((msg, idx) => {
-                  const isUser = msg.sender === 'user';
+        {subTab === 'assessment' ? (
+          <>
+            {/* Dynamic Consult Phase Tab Selectors */}
+            <View className="px-4 py-3 bg-emerald-950/20 border-b border-emerald-900/10">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 10 }} className="flex-row">
+                {(['morning', 'afternoon', 'evening', 'weekly', 'monthly'] as ConsultationPhase[]).map((phase) => {
+                  const isSelected = activePhase === phase;
+                  const label = phase === 'morning' ? 'Morning' : phase === 'afternoon' ? 'Midday' : phase === 'evening' ? 'Evening' : phase === 'weekly' ? 'Weekly' : 'Monthly';
                   return (
-                    <View 
-                      key={idx} 
-                      className={`mb-4 flex-row ${isUser ? 'justify-end' : 'justify-start'}`}
+                    <TouchableOpacity
+                      key={phase}
+                      onPress={() => setActivePhase(phase)}
+                      className={`px-4 py-2 rounded-xl mr-2 border ${
+                        isSelected 
+                          ? 'bg-emerald-500 border-emerald-400' 
+                          : 'bg-emerald-950/40 border-emerald-900/30'
+                      }`}
                     >
-                      <View 
-                        className={`max-w-[85%] p-4.5 rounded-3xl border ${
-                          isUser 
-                            ? 'bg-emerald-500 border-emerald-400 rounded-tr-none' 
-                            : 'bg-[#111d19]/65 border-[#1f372f] rounded-tl-none'
-                        }`}
-                      >
-                        {isUser ? (
-                          <Text className="text-emerald-950 font-bold text-xs leading-relaxed font-sans">
-                            {msg.message_text}
-                          </Text>
-                        ) : (
-                          <DoctorMessageContent text={msg.message_text} />
-                        )}
-                      </View>
-                    </View>
+                      <Text className={`text-[10px] font-bold ${isSelected ? 'text-emerald-950' : 'text-emerald-400'}`}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
                   );
                 })}
-
-                {thinking && <WellnessTypingIndicator />}
               </ScrollView>
+            </View>
 
-              {/* Suggestion Chips Panel */}
-              {inputText.trim() === '' && (
-                <View className="px-4 py-2 border-t border-[#1f372f]/30">
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
-                    {[
-                      "Explain Kapha pacifying herbs.",
-                      "Are warm spices good for Pitta?",
-                      "Breathing for high stress index.",
-                      "How does hydration affect Agni?"
-                    ].map((sug, idx) => (
-                      <TouchableOpacity
-                        key={idx}
-                        onPress={() => setInputText(sug)}
-                        className="bg-[#111d19] border border-[#1f372f] px-3.5 py-1.5 rounded-full mr-2 active:bg-emerald-950"
-                      >
-                        <Text className="text-emerald-400 text-[9px] font-bold font-mono">{sug}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+            <ScrollView className="flex-1 px-5 pt-4" contentContainerStyle={{ paddingBottom: 40 }}>
+              {loading ? (
+                <View className="flex-1 py-20 items-center justify-center">
+                  <ActivityIndicator size="large" color="#10b981" />
+                  <Text className="text-emerald-400 text-xs font-medium mt-4">Compiling physician's assessment...</Text>
+                </View>
+              ) : consultation ? (
+                <View className="space-y-5">
+                  
+                  {/* Prescription Sheet Card */}
+                  <View className="bg-[#051f18]/30 border-2 border-emerald-800/30 p-6 rounded-3xl relative overflow-hidden">
+                    <View className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-emerald-500/5 rounded-full pointer-events-none" />
+                    
+                    {/* Header */}
+                    <View className="border-b border-emerald-850/40 pb-4 mb-4 flex-row justify-between items-start">
+                      <View>
+                        <Text className="text-white text-base font-extrabold">{getPhaseTitle(consultation.phase)}</Text>
+                        <Text className="text-emerald-400/50 text-[10px] mt-0.5 font-mono">B.A.M.S. Certified Counselor</Text>
+                      </View>
+                      <View className="bg-emerald-950/60 border border-emerald-900/40 px-2.5 py-0.5 rounded-full">
+                        <Text className="text-emerald-400 text-[8px] font-mono uppercase">State: {consultation.dominantDoshaLabel}</Text>
+                      </View>
+                    </View>
+
+                    {/* Assessment text */}
+                    <View className="mb-6">
+                      <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-widest mb-1.5">Physician's Assessment</Text>
+                      <Text className="text-emerald-100 text-xs italic leading-relaxed pl-3 border-l-2 border-emerald-500">
+                        "{consultation.assessment}"
+                      </Text>
+                    </View>
+
+                    {/* Prescriptions Grid */}
+                    <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-widest mb-3">Therapeutic Prescriptions</Text>
+                    <View className="space-y-3">
+                      {consultation.prescriptions.map((pres, idx) => (
+                        <View key={idx} className="bg-emerald-950/30 border border-emerald-900/20 p-4 rounded-2xl">
+                          <View className="flex-row justify-between items-center mb-1.5">
+                            <Text className="text-white text-xs font-bold">{pres.instruction}</Text>
+                            <View className="bg-emerald-500/10 border border-emerald-500/35 px-2 py-0.5 rounded">
+                              <Text className="text-emerald-400 text-[8px] font-bold uppercase">{pres.category}</Text>
+                            </View>
+                          </View>
+                          <Text className="text-slate-300 text-[10px] leading-relaxed font-sans">
+                            Rationale: {pres.rationale}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    {/* Diagnostic Indexes used */}
+                    <View className="mt-6 pt-4 border-t border-emerald-850/40 flex-row justify-between items-center">
+                      <View>
+                        <Text className="text-emerald-400/50 text-[8px] font-mono uppercase">Digestion Index: {consultation.agniClassification}</Text>
+                        <Text className="text-emerald-400/50 text-[8px] font-mono uppercase mt-0.5">Immunity Index: {consultation.ojasClassification}</Text>
+                      </View>
+                      <Ionicons name="finger-print-outline" size={16} color="#047857" />
+                    </View>
+                  </View>
+
+                  {/* Clinical Evidence badges */}
+                  <View className="bg-[#051f18]/30 border border-emerald-800/20 p-5 rounded-2xl">
+                    <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-3">Referenced Biometrics</Text>
+                    <View className="flex-row flex-wrap">
+                      {consultation.vitalMetricsUsed.map((metric, idx) => (
+                        <View key={idx} className="bg-emerald-950/40 border border-emerald-900/30 px-3 py-2 rounded-xl mr-2 mb-2 flex-row items-center">
+                          <View className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-2" />
+                          <Text className="text-emerald-300 text-[10px] font-medium mr-1.5">{metric.label}:</Text>
+                          <Text className="text-white text-[10px] font-bold font-mono">{metric.value}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Ask Follow Up Button */}
+                  <TouchableOpacity
+                    onPress={() => setSubTab('chat')}
+                    className="bg-emerald-500 py-4 rounded-2xl flex-row justify-center items-center active:bg-emerald-600 shadow-md mb-6"
+                  >
+                    <Ionicons name="chatbubble-ellipses-outline" size={16} color="#022c22" style={{ marginRight: 8 }} />
+                    <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">Ask Follow-up Question</Text>
+                  </TouchableOpacity>
+
+                </View>
+              ) : (
+                <View className="py-20 items-center justify-center">
+                  <Text className="text-emerald-400/50 text-xs italic">No consultation records available today.</Text>
                 </View>
               )}
+            </ScrollView>
+          </>
+        ) : (
+          <View className="flex-1">
+            {/* Chat messages */}
+            <ScrollView 
+              ref={scrollViewRef}
+              className="flex-1 px-5 pt-4"
+              contentContainerStyle={{ paddingBottom: 20 }}
+            >
+              {chatMessages.map((msg, idx) => {
+                const isUser = msg.sender === 'user';
+                return (
+                  <View 
+                    key={idx} 
+                    className={`mb-4 flex-row ${isUser ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <View 
+                      className={`max-w-[85%] p-4.5 rounded-3xl border ${
+                        isUser 
+                          ? 'bg-emerald-500 border-emerald-400 rounded-tr-none' 
+                          : 'bg-[#111d19]/65 border-[#1f372f] rounded-tl-none'
+                      }`}
+                    >
+                      {isUser ? (
+                        <Text className="text-emerald-950 font-bold text-xs leading-relaxed font-sans">
+                          {msg.message_text}
+                        </Text>
+                      ) : (
+                        <DoctorMessageContent text={msg.message_text} />
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
 
-              {/* Input section */}
-              <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                className="border-t border-[#1f372f] bg-[#091310] p-4 flex-row items-center"
+              {thinking && <WellnessTypingIndicator />}
+            </ScrollView>
+
+            {/* Suggestion Chips Panel */}
+            {inputText.trim() === '' && (
+              <View className="px-4 py-2 border-t border-[#1f372f]/30">
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+                  {[
+                    "Explain Kapha pacifying herbs.",
+                    "Are warm spices good for Pitta?",
+                    "Breathing for high stress index.",
+                    "How does hydration affect Agni?"
+                  ].map((sug, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      onPress={() => setInputText(sug)}
+                      className="bg-[#111d19] border border-[#1f372f] px-3.5 py-1.5 rounded-full mr-2 active:bg-emerald-950"
+                    >
+                      <Text className="text-emerald-400 text-[9px] font-bold font-mono">{sug}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Input section */}
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+              className="border-t border-[#1f372f] bg-[#091310] p-4 flex-row items-center font-sans"
+            >
+              <TextInput
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Ask for dietary adjustments, dosage guidelines..."
+                placeholderTextColor="#064e3b"
+                style={{ flex: 1, marginRight: 8 }}
+                className="h-12 bg-[#111d19]/40 border border-[#1f372f] rounded-xl px-4 text-white text-xs font-sans"
+              />
+              
+              {/* Voice Intake Toggle button */}
+              <TouchableOpacity
+                onPress={handleTriggerVoiceSpeech}
+                className="w-12 h-12 rounded-xl bg-[#111d19] border border-[#1f372f] justify-center items-center active:bg-emerald-900/10 mr-2"
               >
-                <TextInput
-                  value={inputText}
-                  onChangeText={setInputText}
-                  placeholder="Ask for dietary adjustments, dosage guidelines..."
-                  placeholderTextColor="#064e3b"
-                  style={{ flex: 1, marginRight: 8 }}
-                  className="h-12 bg-[#111d19]/40 border border-[#1f372f] rounded-xl px-4 text-white text-xs font-sans"
-                />
-                
-                {/* Voice Intake Toggle button */}
-                <TouchableOpacity
-                  onPress={handleTriggerVoiceSpeech}
-                  className="w-12 h-12 rounded-xl bg-[#111d19] border border-[#1f372f] justify-center items-center active:bg-emerald-900/10 mr-2"
-                >
-                  <Ionicons name="mic-outline" size={20} color="#34d399" />
-                </TouchableOpacity>
+                <Ionicons name="mic-outline" size={20} color="#34d399" />
+              </TouchableOpacity>
 
-                <TouchableOpacity
-                  onPress={handleSendMessage}
-                  disabled={thinking || !inputText.trim()}
-                  className="w-12 h-12 rounded-xl bg-emerald-500 justify-center items-center active:bg-emerald-600 disabled:bg-[#111d19] disabled:border disabled:border-[#1f372f]"
-                >
-                  <Ionicons name="send" size={16} color={inputText.trim() ? '#022c22' : '#047857'} />
-                </TouchableOpacity>
-              </KeyboardAvoidingView>
-
-            </LinearGradient>
-          </SafeAreaView>
-        </Modal>
+              <TouchableOpacity
+                onPress={handleSendMessage}
+                disabled={thinking || !inputText.trim()}
+                className="w-12 h-12 rounded-xl bg-emerald-500 justify-center items-center active:bg-emerald-600 disabled:bg-[#111d19] disabled:border disabled:border-[#1f372f]"
+              >
+                <Ionicons name="send" size={16} color={inputText.trim() ? '#022c22' : '#047857'} />
+              </TouchableOpacity>
+            </KeyboardAvoidingView>
+          </View>
+        )}
 
         {/* VOICE INPUT SIMULATOR MODAL */}
         <Modal

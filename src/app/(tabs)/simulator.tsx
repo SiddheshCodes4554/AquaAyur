@@ -89,22 +89,22 @@ export default function SimulatorScreen() {
           <View className="bg-[#051f18]/30 border border-emerald-800/20 p-5 rounded-3xl mb-5 relative overflow-hidden">
             <View className="absolute right-0 top-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
             
-            <Text className="text-emerald-450 text-[10px] uppercase font-bold tracking-wider mb-3">Simulator Telemetry HUD</Text>
+            <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-3">Simulator Telemetry HUD</Text>
             
             {/* Status Summary */}
             <View className="flex-row justify-between items-center mb-4 pb-3 border-b border-emerald-900/20">
               <View>
-                <Text className="text-emerald-350/50 text-[9px] uppercase font-bold">Packet counter</Text>
+                <Text className="text-emerald-400/50 text-[9px] uppercase font-bold">Packet counter</Text>
                 <Text className="text-white text-lg font-bold font-mono">{simulatorSettings.packetCount} <Text className="text-emerald-400 text-[10px] font-normal">pkts</Text></Text>
               </View>
               <View className="h-8 w-[1px] bg-emerald-900/20" />
               <View>
-                <Text className="text-emerald-350/50 text-[9px] uppercase font-bold">Uptime (MM:SS)</Text>
+                <Text className="text-emerald-400/50 text-[9px] uppercase font-bold">Uptime (MM:SS)</Text>
                 <Text className="text-white text-lg font-bold font-mono">{formatUptime(simulatorSettings.uptimeSeconds)}</Text>
               </View>
               <View className="h-8 w-[1px] bg-emerald-900/20" />
               <View>
-                <Text className="text-emerald-350/50 text-[9px] uppercase font-bold">Connection Quality</Text>
+                <Text className="text-emerald-400/50 text-[9px] uppercase font-bold">Connection Quality</Text>
                 <Text className="text-white text-lg font-bold font-mono">{simulatorSettings.connectionQuality}%</Text>
               </View>
             </View>
@@ -112,7 +112,7 @@ export default function SimulatorScreen() {
             {/* Battery Level Progress Bar */}
             <View className="mb-2">
               <View className="flex-row justify-between mb-1">
-                <Text className="text-emerald-350/50 text-[9px] uppercase font-bold">Sensor Battery Charge</Text>
+                <Text className="text-emerald-400/50 text-[9px] uppercase font-bold">Sensor Battery Charge</Text>
                 <Text className="text-white text-[10px] font-mono font-bold">{Math.round(simulatorSettings.battery)}%</Text>
               </View>
               <View className="w-full h-2.5 bg-emerald-950 rounded-full overflow-hidden border border-emerald-900/30">
@@ -129,7 +129,7 @@ export default function SimulatorScreen() {
 
           {/* AUTOMATIC MODES PRESETS */}
           <View className="bg-[#051f18]/30 border border-emerald-800/20 p-5 rounded-3xl mb-5">
-            <Text className="text-emerald-450 text-[10px] uppercase font-bold tracking-wider mb-3">Intelligent Activity Presets</Text>
+            <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-3">Intelligent Activity Presets</Text>
             <View className="flex-row flex-wrap gap-2">
               {Object.keys(PRESETS).map((pName) => {
                 const isActive = simulatorSettings.activeScenarioName === pName;
@@ -152,7 +152,7 @@ export default function SimulatorScreen() {
 
           {/* LIVE HARDWARE SLIDERS */}
           <View className="bg-[#051f18]/30 border border-emerald-800/20 p-5 rounded-3xl mb-5">
-            <Text className="text-emerald-450 text-[10px] uppercase font-bold tracking-wider mb-4">Live Biometric Controls</Text>
+            <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-4">Live Biometric Controls</Text>
             
             <ValueSlider
               label="Heart Rate"
@@ -177,7 +177,7 @@ export default function SimulatorScreen() {
             {/* Steps Controller with Buttons */}
             <View className="mb-4">
               <View className="flex-row justify-between items-center mb-1.5">
-                <Text className="text-emerald-450 text-xs font-bold font-sans">Step Counter</Text>
+                <Text className="text-emerald-400 text-xs font-bold font-sans">Step Counter</Text>
                 <Text className="text-white text-xs font-mono font-semibold">{simulatorSettings.steps} steps</Text>
               </View>
               <View className="flex-row items-center space-x-2">
@@ -222,7 +222,7 @@ export default function SimulatorScreen() {
 
             {/* Activity State Selector */}
             <View className="mb-4">
-              <Text className="text-emerald-450 text-xs font-bold font-sans mb-1.5">Activity State</Text>
+              <Text className="text-emerald-400 text-xs font-bold font-sans mb-1.5">Activity State</Text>
               <View className="flex-row flex-wrap gap-1.5">
                 {(['Resting', 'Walking', 'Running', 'Cycling', 'Sleeping', 'Meditating'] as ActivityType[]).map((act) => {
                   const isActive = simulatorSettings.activity === act;
@@ -234,7 +234,7 @@ export default function SimulatorScreen() {
                         isActive ? 'bg-emerald-500 border-emerald-400' : 'bg-emerald-950/45 border-emerald-900/20'
                       }`}
                     >
-                      <Text className={`text-[9px] font-bold ${isActive ? 'text-emerald-950' : 'text-emerald-450'}`}>
+                      <Text className={`text-[9px] font-bold ${isActive ? 'text-emerald-950' : 'text-emerald-400'}`}>
                         {act}
                       </Text>
                     </TouchableOpacity>
@@ -290,7 +290,7 @@ export default function SimulatorScreen() {
               onPress={() => setShowScenarios(!showScenarios)}
               className="flex-row justify-between items-center mb-3"
             >
-              <Text className="text-emerald-450 text-[10px] uppercase font-bold tracking-wider">Simulation Scenarios ({Object.keys(SCENARIOS).length})</Text>
+              <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider">Simulation Scenarios ({Object.keys(SCENARIOS).length})</Text>
               <Ionicons name={showScenarios ? 'chevron-up' : 'chevron-down'} size={14} color="#047857" />
             </TouchableOpacity>
             
@@ -328,7 +328,7 @@ export default function SimulatorScreen() {
 
           {/* DEVELOPER TOOLS PANEL */}
           <View className="bg-[#051f18]/30 border border-emerald-800/20 p-5 rounded-3xl mb-4">
-            <Text className="text-emerald-450 text-[10px] uppercase font-bold tracking-wider mb-4">Developer Tools Toolbar</Text>
+            <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-4">Developer Tools Toolbar</Text>
             
             <View className="flex-row space-x-3 mb-3">
               {/* Play/Pause */}
@@ -419,7 +419,7 @@ const ValueSlider = ({
   return (
     <View className="mb-4">
       <View className="flex-row justify-between items-center mb-1">
-        <Text className="text-emerald-450 text-xs font-bold font-sans">{label}</Text>
+        <Text className="text-emerald-400 text-xs font-bold font-sans">{label}</Text>
         <Text className="text-white text-xs font-mono font-semibold">
           {value} {unit}
         </Text>

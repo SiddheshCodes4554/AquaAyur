@@ -836,7 +836,7 @@ export default function InsightsScreen() {
                   </Text>
                   
                   <View className="bg-[#172722]/50 border border-[#1f372f]/50 p-3 rounded-xl">
-                    <Text className="text-emerald-350 text-[9px] font-bold uppercase tracking-widest font-mono mb-1">Seasonal Guidelines</Text>
+                    <Text className="text-emerald-400 text-[9px] font-bold uppercase tracking-widest font-mono mb-1">Seasonal Guidelines</Text>
                     <Text className="text-slate-300 text-[10px] leading-relaxed">
                       Drink cooling fluids (coconut water, buttermilk) and consume sweet, juicy summer fruits to preserve cellular vitality and protect your tissue reserves.
                     </Text>
@@ -1231,9 +1231,9 @@ const PredictiveForecastCard = React.memo(function PredictiveForecastCard() {
   const activeResult = predictions[activeInterval];
   
   const getConfidenceLevel = (score: number) => {
-    if (score >= 80) return { label: 'High Confidence', color: 'text-emerald-400', bg: 'bg-emerald-950/60 border-emerald-500/25', dot: 'bg-emerald-450' };
-    if (score >= 60) return { label: 'Moderate Confidence', color: 'text-amber-400', bg: 'bg-amber-950/60 border-amber-900/25', dot: 'bg-amber-450' };
-    return { label: 'Low Confidence', color: 'text-rose-400', bg: 'bg-rose-950/60 border-rose-900/25', dot: 'bg-rose-450' };
+    if (score >= 80) return { label: 'High Confidence', color: 'text-emerald-400', bg: 'bg-emerald-950/60 border-emerald-500/25', dot: 'bg-emerald-500' };
+    if (score >= 60) return { label: 'Moderate Confidence', color: 'text-amber-400', bg: 'bg-amber-950/60 border-amber-900/25', dot: 'bg-amber-500' };
+    return { label: 'Low Confidence', color: 'text-rose-400', bg: 'bg-rose-950/60 border-rose-900/25', dot: 'bg-rose-500' };
   };
 
   const confidenceTheme = getConfidenceLevel(activeResult.confidenceScore);
@@ -1316,15 +1316,15 @@ const PredictiveForecastCard = React.memo(function PredictiveForecastCard() {
 
       {/* Key Driver Analysis */}
       <View className="bg-emerald-950/40 border border-emerald-900/30 p-4 rounded-2xl mb-1">
-        <Text className="text-emerald-350 text-[10px] font-bold uppercase tracking-wider mb-1.5 flex-row items-center">
+        <Text className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-1.5 flex-row items-center">
           <Ionicons name="git-branch-outline" size={10} style={{ marginRight: 4 }} /> Key Trend Driver
         </Text>
         <Text className="text-white text-xs leading-relaxed mb-3">{activeResult.keyDriver}</Text>
 
-        <Text className="text-emerald-350 text-[10px] font-bold uppercase tracking-wider mb-1.5 flex-row items-center">
+        <Text className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-1.5 flex-row items-center">
           <Ionicons name="shield-checkmark" size={10} style={{ marginRight: 4 }} /> Recommendation
         </Text>
-        <Text className="text-emerald-250 text-xs leading-relaxed">{activeResult.recommendation}</Text>
+        <Text className="text-emerald-300 text-xs leading-relaxed">{activeResult.recommendation}</Text>
       </View>
     </View>
   );

@@ -262,7 +262,7 @@ export default function SettingsScreen() {
             {expandedSection === 'wearable' && (
               <View className="px-5 pb-5 border-t border-[#1f372f]/45 pt-4 space-y-4">
                 <View className="bg-[#172722]/60 p-4 rounded-2xl border border-[#1f372f]">
-                  <Text className="text-emerald-450 text-[8px] uppercase font-bold tracking-widest font-mono">Telemetry Mode</Text>
+                  <Text className="text-emerald-400 text-[8px] uppercase font-bold tracking-widest font-mono">Telemetry Mode</Text>
                   <Text className="text-white text-xs font-bold mt-1">Concentric Sensor Handshake</Text>
                   <Text className="text-slate-350 text-[10px] leading-relaxed mt-1">
                     Bluetooth discovery binds core parameters (HRV, skin temp) directly into the Ayurvedic rule engine every 15s.

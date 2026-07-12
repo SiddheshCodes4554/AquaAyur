@@ -364,7 +364,7 @@ export default function DashboardScreen() {
               {visibleTasks.length === 0 ? (
                 <View className="py-4 items-center justify-center">
                   <Ionicons name="checkmark-done-circle-outline" size={32} color="#10b981" />
-                  <Text className="text-emerald-450 text-xs font-serif font-black mt-2 text-center">
+                  <Text className="text-emerald-400 text-xs font-serif font-black mt-2 text-center">
                     All remaining Dinacharya tasks are completed!
                   </Text>
                   <Text className="text-slate-350 text-[10px] text-center mt-1">
@@ -625,22 +625,42 @@ const AyurvedicTwinAvatar = React.memo(function AyurvedicTwinAvatar() {
 
   const [polyPoints, setPolyPoints] = useState('150,50 250,200 50,200');
   useEffect(() => {
+    const currentValues = {
+      vY: 150 - (30 + (vata / 100) * 100),
+      pX: 150 + (30 + (pitta / 100) * 100) * Math.cos(Math.PI / 6),
+      pY: 150 + (30 + (pitta / 100) * 100) * Math.sin(Math.PI / 6),
+      kX: 150 + (30 + (kapha / 100) * 100) * Math.cos(5 * Math.PI / 6),
+      kY: 150 + (30 + (kapha / 100) * 100) * Math.sin(5 * Math.PI / 6),
+    };
+
     const updatePoints = () => {
-      const vYVal = (vataY as any)._value;
-      const pXVal = (pittaX as any)._value;
-      const pYVal = (pittaY as any)._value;
-      const kXVal = (kaphaX as any)._value;
-      const kYVal = (kaphaY as any)._value;
-      setPolyPoints(`150,${vYVal} ${pXVal},${pYVal} ${kXVal},${kYVal}`);
+      setPolyPoints(`150,${currentValues.vY} ${currentValues.pX},${currentValues.pY} ${currentValues.kX},${currentValues.kY}`);
     };
 
     const listeners = [
-      vataY.addListener(updatePoints),
-      pittaX.addListener(updatePoints),
-      pittaY.addListener(updatePoints),
-      kaphaX.addListener(updatePoints),
-      kaphaY.addListener(updatePoints),
+      vataY.addListener(({ value }) => {
+        currentValues.vY = value;
+        updatePoints();
+      }),
+      pittaX.addListener(({ value }) => {
+        currentValues.pX = value;
+        updatePoints();
+      }),
+      pittaY.addListener(({ value }) => {
+        currentValues.pY = value;
+        updatePoints();
+      }),
+      kaphaX.addListener(({ value }) => {
+        currentValues.kX = value;
+        updatePoints();
+      }),
+      kaphaY.addListener(({ value }) => {
+        currentValues.kY = value;
+        updatePoints();
+      }),
     ];
+
+    updatePoints();
 
     return () => {
       vataY.removeListener(listeners[0]);
@@ -649,7 +669,7 @@ const AyurvedicTwinAvatar = React.memo(function AyurvedicTwinAvatar() {
       kaphaX.removeListener(listeners[3]);
       kaphaY.removeListener(listeners[4]);
     };
-  }, []);
+  }, [vata, pitta, kapha]);
 
   return (
     <View className="items-center justify-center py-2 relative">
