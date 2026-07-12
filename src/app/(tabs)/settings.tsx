@@ -186,7 +186,8 @@ export default function SettingsScreen() {
                       value={weight}
                       onChangeText={setWeight}
                       keyboardType="numeric"
-                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-2.5 text-white text-xs font-bold font-mono"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-2.5 text-white text-xs font-bold"
+                      style={{ fontFamily: 'monospace' }}
                     />
                   </View>
                   <View className="flex-1">
@@ -195,7 +196,8 @@ export default function SettingsScreen() {
                       value={height}
                       onChangeText={setHeight}
                       keyboardType="numeric"
-                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-2.5 text-white text-xs font-bold font-mono"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-2.5 text-white text-xs font-bold"
+                      style={{ fontFamily: 'monospace' }}
                     />
                   </View>
                 </View>
@@ -207,7 +209,8 @@ export default function SettingsScreen() {
                       value={waterGoal}
                       onChangeText={setWaterGoal}
                       keyboardType="numeric"
-                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-2.5 text-white text-xs font-bold font-mono"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-2.5 text-white text-xs font-bold"
+                      style={{ fontFamily: 'monospace' }}
                     />
                   </View>
                   <View className="flex-1">
@@ -216,7 +219,8 @@ export default function SettingsScreen() {
                       value={calorieGoal}
                       onChangeText={setCalorieGoal}
                       keyboardType="numeric"
-                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-2.5 text-white text-xs font-bold font-mono"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-2.5 text-white text-xs font-bold"
+                      style={{ fontFamily: 'monospace' }}
                     />
                   </View>
                 </View>
