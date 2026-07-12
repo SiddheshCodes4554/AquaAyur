@@ -205,7 +205,7 @@ export default function FoodAnalysisScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.7,
@@ -283,9 +283,9 @@ export default function FoodAnalysisScreen() {
       const weightVal = parseFloat(weight);
 
       let uploadedUrl: string | null = null;
-      if (imageUri) {
+      if (imageBase64) {
         setUploadingImage(true);
-        uploadedUrl = await uploadMealImage(imageUri, user.id);
+        uploadedUrl = await uploadMealImage(imageBase64, user.id);
         setUploadingImage(false);
       }
 
