@@ -27,7 +27,14 @@ export default function DinacharyaScreen() {
   const todayTotalMl = useHydrationStore(state => state.todayTotalMl);
   const waterGoal = useAuthStore(state => state.profile?.daily_water_goal_ml || 2500);
 
-  const [activeTab, setActiveTab] = useState<RoutineTab>('morning');
+  const getInitialTab = (): RoutineTab => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'morning';
+    if (hour < 17) return 'afternoon';
+    return 'evening';
+  };
+
+  const [activeTab, setActiveTab] = useState<RoutineTab>(getInitialTab());
 
   // Quick Action Modal States
   const [showSleepLogger, setShowSleepLogger] = useState(false);

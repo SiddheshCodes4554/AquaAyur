@@ -155,6 +155,44 @@ export default function DashboardScreen() {
     };
   }, [todayAgni, todayOjas, currentDosha]);
 
+  const visibleTasks = useMemo(() => {
+    const currentHour = new Date().getHours();
+    const tasks = [
+      {
+        key: 'hydration',
+        title: 'Hydration Target',
+        subtitle: `${todayTotalMl} / ${profile?.daily_water_goal_ml || 2500} ml Logged`,
+        timeLabel: '7:00 AM',
+        targetHour: 7,
+        completed: !!completions.hydration,
+        why: 'Hydration Target'
+      },
+      {
+        key: 'meal_timing',
+        title: 'Principal Midday Meal',
+        subtitle: 'Eat between 12:00 - 13:30 when Agni fires peak',
+        timeLabel: '12:30 PM',
+        targetHour: 13,
+        completed: !!completions.meal_timing,
+        why: 'Principal Midday Meal'
+      },
+      {
+        key: 'sleep_timing',
+        title: 'Night Nadi Shodhana',
+        subtitle: '5 minutes of alternate nostril breath at 21:30',
+        timeLabel: '9:30 PM',
+        targetHour: 21,
+        completed: !!completions.sleep_timing,
+        why: 'Night Nadi Shodhana'
+      }
+    ];
+
+    return tasks.filter(task => {
+      if (!task.completed) return true;
+      return currentHour <= (task.targetHour + 2);
+    });
+  }, [completions, todayTotalMl, profile?.daily_water_goal_ml]);
+
   const logHydrationQuick = async () => {
     if (!user?.id) return;
     try {
@@ -315,83 +353,54 @@ export default function DashboardScreen() {
               </Text>
             </View>
           </View>
-
           {/* Today's Plan (Checklist recommendations) */}
           <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl mb-8">
-            <Text className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-4 font-mono">Today's Plan</Text>
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider font-mono">Today's Plan</Text>
+              <Text className="text-[#34d399]/60 text-[9px] font-mono">Remaining Tasks</Text>
+            </View>
             
             <View className="space-y-3.5">
-              {/* Hydration */}
-              <View className="flex-row items-center bg-[#172722]/40 p-4 rounded-2xl border border-[#1f372f] justify-between">
-                <TouchableOpacity
-                  onPress={() => user?.id && toggleTaskCompletion(user.id, 'hydration')}
-                  className="flex-row items-center flex-1 mr-3"
-                >
-                  <Ionicons 
-                    name={completions.hydration ? 'checkmark-circle' : 'ellipse-outline'} 
-                    size={22} 
-                    color={completions.hydration ? '#10b981' : '#1f372f'} 
-                  />
-                  <View className="ml-3 flex-1">
-                    <Text className={`text-white text-xs font-bold ${completions.hydration ? 'line-through text-emerald-500/40' : ''}`}>Hydration Target</Text>
-                    <Text className="text-emerald-300 text-[10px] mt-0.5 font-mono">{todayTotalMl} / {profile?.daily_water_goal_ml || 2500} ml Logged</Text>
+              {visibleTasks.length === 0 ? (
+                <View className="py-4 items-center justify-center">
+                  <Ionicons name="checkmark-done-circle-outline" size={32} color="#10b981" />
+                  <Text className="text-emerald-450 text-xs font-serif font-black mt-2 text-center">
+                    All remaining Dinacharya tasks are completed!
+                  </Text>
+                  <Text className="text-slate-350 text-[10px] text-center mt-1">
+                    Rest and conserve your Ojas.
+                  </Text>
+                </View>
+              ) : (
+                visibleTasks.map((task) => (
+                  <View key={task.key} className="flex-row items-center bg-[#172722]/40 p-4 rounded-2xl border border-[#1f372f] justify-between">
+                    <TouchableOpacity
+                      onPress={() => user?.id && toggleTaskCompletion(user.id, task.key)}
+                      className="flex-row items-center flex-1 mr-3"
+                    >
+                      <Ionicons 
+                        name={task.completed ? 'checkmark-circle' : 'ellipse-outline'} 
+                        size={22} 
+                        color={task.completed ? '#10b981' : '#1f372f'} 
+                      />
+                      <View className="ml-3 flex-1">
+                        <Text className={`text-white text-xs font-bold ${task.completed ? 'line-through text-emerald-500/40' : ''}`}>
+                          {task.title}
+                        </Text>
+                        <Text className="text-[#34d399]/85 text-[10px] mt-0.5">
+                          {task.subtitle}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleOpenExplanation(task.why)}
+                      className="bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1.5 rounded-lg active:bg-emerald-500/20"
+                    >
+                      <Text className="text-emerald-400 font-bold text-[8px] tracking-wider uppercase">WHY?</Text>
+                    </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleOpenExplanation('Hydration Target')}
-                  className="bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1.5 rounded-lg active:bg-emerald-500/20"
-                >
-                  <Text className="text-emerald-400 font-bold text-[8px] tracking-wider uppercase">WHY?</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Midday meal */}
-              <View className="flex-row items-center bg-[#172722]/40 p-4 rounded-2xl border border-[#1f372f] justify-between">
-                <TouchableOpacity
-                  onPress={() => user?.id && toggleTaskCompletion(user.id, 'exercise_timing')}
-                  className="flex-row items-center flex-1 mr-3"
-                >
-                  <Ionicons 
-                    name={completions.exercise_timing ? 'checkmark-circle' : 'ellipse-outline'} 
-                    size={22} 
-                    color={completions.exercise_timing ? '#10b981' : '#1f372f'} 
-                  />
-                  <View className="ml-3 flex-1">
-                    <Text className={`text-white text-xs font-bold ${completions.exercise_timing ? 'line-through text-emerald-500/40' : ''}`}>Principal Midday Meal</Text>
-                    <Text className="text-emerald-300 text-[10px] mt-0.5">Eat between 12:00 - 13:30 when Agni fires peak</Text>
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleOpenExplanation('Principal Midday Meal')}
-                  className="bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1.5 rounded-lg active:bg-emerald-500/20"
-                >
-                  <Text className="text-emerald-400 font-bold text-[8px] tracking-wider uppercase">WHY?</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Night wind-down */}
-              <View className="flex-row items-center bg-[#172722]/40 p-4 rounded-2xl border border-[#1f372f] justify-between">
-                <TouchableOpacity
-                  onPress={() => user?.id && toggleTaskCompletion(user.id, 'sleep_timing')}
-                  className="flex-row items-center flex-1 mr-3"
-                >
-                  <Ionicons 
-                    name={completions.sleep_timing ? 'checkmark-circle' : 'ellipse-outline'} 
-                    size={22} 
-                    color={completions.sleep_timing ? '#10b981' : '#1f372f'} 
-                  />
-                  <View className="ml-3 flex-1">
-                    <Text className={`text-white text-xs font-bold ${completions.sleep_timing ? 'line-through text-emerald-500/40' : ''}`}>Night Nadi Shodhana</Text>
-                    <Text className="text-emerald-300 text-[10px] mt-0.5">5 minutes of alternate nostril breath at 21:30</Text>
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleOpenExplanation('Night Nadi Shodhana')}
-                  className="bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1.5 rounded-lg active:bg-emerald-500/20"
-                >
-                  <Text className="text-emerald-400 font-bold text-[8px] tracking-wider uppercase">WHY?</Text>
-                </TouchableOpacity>
-              </View>
+                ))
+              )}
             </View>
           </View>
 
