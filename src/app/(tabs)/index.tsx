@@ -36,6 +36,7 @@ export default function DashboardScreen() {
   const sleepPending = useSleepStore(state => state.pendingSyncCount);
   const totalPending = hydrationPending + telemetryPending + sleepPending;
   const liveData = useSensorStore(state => state.liveData);
+  const sensorStatus = useSensorStore(state => state.status);
   const { agni, ojas } = useDigitalTwinStore();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -204,6 +205,74 @@ export default function DashboardScreen() {
           <View className="items-center justify-center mb-8">
             <AyurvedicTwinAvatar />
           </View>
+
+          {/* Live Telemetry Stream Card */}
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/live-monitor')}
+            className="bg-[#111d19]/45 border border-[#1f372f] p-5 rounded-3xl mb-8 active:bg-emerald-900/10"
+          >
+            <View className="flex-row justify-between items-center mb-4">
+              <View className="flex-row items-center">
+                <Ionicons name="pulse" size={16} color="#34d399" />
+                <Text className="text-white text-xs font-serif font-black ml-2">Live Biometric Feed</Text>
+              </View>
+              <View className="flex-row items-center bg-[#172722]/85 border border-[#1f372f]/50 px-2.5 py-0.5 rounded-full">
+                <View 
+                  className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                    sensorStatus === 'connected' ? 'bg-emerald-400 shadow shadow-emerald-400' : 'bg-rose-500'
+                  }`} 
+                />
+                <Text className="text-white text-[8px] font-bold uppercase font-mono tracking-widest">
+                  {sensorStatus === 'connected' ? 'Live Stream' : 'Offline'}
+                </Text>
+              </View>
+            </View>
+
+            {sensorStatus === 'connected' ? (
+              <View className="flex-row justify-between items-center">
+                <View className="items-center flex-1">
+                  <View className="flex-row items-center">
+                    <Ionicons name="heart" size={12} color="#ef4444" style={{ marginRight: 4 }} />
+                    <Text className="text-slate-350 text-[9px] font-mono uppercase tracking-wider">Heart Rate</Text>
+                  </View>
+                  <Text className="text-white text-base font-bold font-mono mt-1">
+                    {liveData?.heartRate || 72} <Text className="text-[9px] font-sans text-slate-400">bpm</Text>
+                  </Text>
+                </View>
+
+                <View className="w-[1px] h-8 bg-[#1f372f]" />
+
+                <View className="items-center flex-1">
+                  <View className="flex-row items-center">
+                    <Ionicons name="thermometer" size={12} color="#38bdf8" style={{ marginRight: 4 }} />
+                    <Text className="text-slate-350 text-[9px] font-mono uppercase tracking-wider">Skin Temp</Text>
+                  </View>
+                  <Text className="text-white text-base font-bold font-mono mt-1">
+                    {liveData?.temperature ? liveData.temperature.toFixed(1) : '36.5'} <Text className="text-[9px] font-sans text-slate-400">°C</Text>
+                  </Text>
+                </View>
+
+                <View className="w-[1px] h-8 bg-[#1f372f]" />
+
+                <View className="items-center flex-1">
+                  <View className="flex-row items-center">
+                    <Ionicons name="footsteps" size={12} color="#fbbf24" style={{ marginRight: 4 }} />
+                    <Text className="text-slate-350 text-[9px] font-mono uppercase tracking-wider">Steps</Text>
+                  </View>
+                  <Text className="text-white text-base font-bold font-mono mt-1">
+                    {liveData?.steps || 0} <Text className="text-[9px] font-sans text-slate-400">steps</Text>
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <View className="flex-row justify-between items-center py-1">
+                <Text className="text-slate-300 text-xs flex-1 mr-3 leading-relaxed">
+                  No active wearable hardware paired. Tap here to pair your sensor band or start the virtual developer simulator.
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color="#34d399" />
+              </View>
+            )}
+          </TouchableOpacity>
 
           {/* Narrative Story block (How am I today?) */}
           <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl mb-8">
@@ -374,7 +443,13 @@ export default function DashboardScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View className="bg-[#172722]/50 border border-[#1f372f] p-4 rounded-2xl mb-4">
+              <TouchableOpacity
+                onPress={() => {
+                  setShowProfileModal(false);
+                  router.push('/(tabs)/profile');
+                }}
+                className="bg-[#172722]/50 border border-[#1f372f] p-4 rounded-2xl mb-4 active:bg-[#172722]/80"
+              >
                 <Text className="text-emerald-400 text-[10px] uppercase font-bold mb-2 font-mono">Active Profile</Text>
                 <Text className="text-white text-base font-bold">{profile?.full_name || 'Yogi'}</Text>
                 <Text className="text-slate-300 text-xs mt-1">
@@ -383,9 +458,23 @@ export default function DashboardScreen() {
                 <Text className="text-slate-300 text-xs mt-1">
                   Water Allocation: <Text className="text-emerald-400">{profile?.daily_water_goal_ml || 2500} ml</Text>
                 </Text>
-              </View>
+              </TouchableOpacity>
 
               <View className="space-y-3.5 mb-6">
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowProfileModal(false);
+                    router.push('/(tabs)/profile');
+                  }}
+                  className="bg-[#172722]/30 border border-[#1f372f] p-4 rounded-xl flex-row items-center justify-between active:bg-emerald-900/10"
+                >
+                  <View className="flex-row items-center">
+                    <Ionicons name="person-outline" size={18} color="#34d399" />
+                    <Text className="text-white text-xs font-bold ml-3">Wellness Profile</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={14} color="#6b7280" />
+                </TouchableOpacity>
+
                 <TouchableOpacity
                   onPress={() => {
                     setShowProfileModal(false);

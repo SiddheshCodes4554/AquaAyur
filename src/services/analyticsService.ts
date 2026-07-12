@@ -184,27 +184,53 @@ INSTRUCTIONS:
     const markdownReport = resJson.choices[0]?.message?.content || 'Failed to generate report.';
 
     // 7. Insert the generated report row into public.health_reports
-    const { data: dbReport, error: dbErr } = await supabase
-      .from('health_reports')
-      .insert({
-        user_id: userId,
-        report_type: reportType,
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
-        summary_markdown: markdownReport,
-        health_score: healthScore,
-        wellness_score: wellnessScore,
-        meta_stats: {
-          avg_hr: avgHr,
-          avg_temp: avgTemp,
-          total_steps: totalSteps,
-          total_water_ml: totalWater,
-          total_calories_kcal: totalCalories,
-          avg_sleep_score: avgSleepScore
-        }
-      })
-      .select()
-      .single();
+    let dbReport: any = null;
+    let dbErr: any = null;
+
+    try {
+      const res = await supabase
+        .from('health_reports')
+        .insert({
+          user_id: userId,
+          report_type: reportType,
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+          summary_markdown: markdownReport,
+          health_score: healthScore,
+          wellness_score: wellnessScore,
+          meta_stats: {
+            avg_hr: avgHr,
+            avg_temp: avgTemp,
+            total_steps: totalSteps,
+            total_water_ml: totalWater,
+            total_calories_kcal: totalCalories,
+            avg_sleep_score: avgSleepScore
+          }
+        })
+        .select()
+        .single();
+      dbReport = res.data;
+      dbErr = res.error;
+    } catch (e) {
+      dbErr = e;
+    }
+
+    if (dbErr && (dbErr.code === 'PGRST204' || String(dbErr.message).includes('health_score') || String(dbErr.message).includes('column'))) {
+      console.log('[AnalyticsService] Retrying insert with core health_reports columns only due to missing schema columns.');
+      const resFallback = await supabase
+        .from('health_reports')
+        .insert({
+          user_id: userId,
+          report_type: reportType,
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+          summary_markdown: markdownReport
+        })
+        .select()
+        .single();
+      dbReport = resFallback.data;
+      dbErr = resFallback.error;
+    }
 
     if (dbErr) throw dbErr;
 

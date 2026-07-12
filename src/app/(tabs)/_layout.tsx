@@ -111,7 +111,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="live-monitor"
         options={{
-          href: null,
+          title: 'Vitals',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'pulse' : 'pulse-outline'} size={21} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
