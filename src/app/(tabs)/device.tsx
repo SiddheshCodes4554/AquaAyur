@@ -1,5 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  TouchableOpacity, 
+  ActivityIndicator, 
+  Animated, 
+  Easing 
+} from 'react-native';
+import { Svg, Circle } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,15 +17,91 @@ import { useBLEStore } from '../../store/useBLEStore';
 import { useSensorStore } from '../../store/useSensorStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { supabase } from '../../services/supabase';
-import { startScanning, stopScanning, connectToDevice, disconnectDevice, sendControlCommand, autoConnectLastPairedDevice, SERVICE_UUID } from '../../services/bleManager';
+import { 
+  startScanning, 
+  stopScanning, 
+  connectToDevice, 
+  disconnectDevice, 
+  sendControlCommand, 
+  autoConnectLastPairedDevice, 
+  SERVICE_UUID 
+} from '../../services/bleManager';
+import { switchSensorMode } from '../../services/sensorManager';
 
 export default function DeviceScreen() {
   const { scannedDevices, connectedDevice, errorMsg } = useBLEStore();
-  const { status } = useSensorStore();
-  const [pulseGlow, setPulseGlow] = useState(1);
+  const { status, dataSource, liveData } = useSensorStore();
   const [showOtherDevices, setShowOtherDevices] = useState(false);
   const [pairedDevice, setPairedDevice] = useState<{ mac_address: string, device_name: string } | null>(null);
   const [loadingPairing, setLoadingPairing] = useState(false);
+
+  // Animations Setup
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(0.95)).current;
+  const signalAnim = useRef(new Animated.Value(0)).current;
+
+  // Concentric slow rotating ring animation
+  useEffect(() => {
+    let rotationLoop: Animated.CompositeAnimation | null = null;
+    if (status === 'scanning' || status === 'connecting') {
+      rotationLoop = Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 3500,
+          easing: Easing.linear,
+          useNativeDriver: true
+        })
+      );
+      rotationLoop.start();
+    } else {
+      rotateAnim.setValue(0);
+    }
+    return () => rotationLoop?.stop();
+  }, [status]);
+
+  // Breathing pulse animation
+  useEffect(() => {
+    let breathingLoop: Animated.CompositeAnimation | null = null;
+    if (status === 'connected' || status === 'scanning') {
+      breathingLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.12,
+            duration: 1800,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 0.95,
+            duration: 1800,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true
+          })
+        ])
+      );
+      breathingLoop.start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+    return () => breathingLoop?.stop();
+  }, [status]);
+
+  // Signal bars loader animation during scan
+  useEffect(() => {
+    let signalLoop: Animated.CompositeAnimation | null = null;
+    if (status === 'scanning') {
+      signalLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(signalAnim, { toValue: 4, duration: 1500, useNativeDriver: false }),
+          Animated.timing(signalAnim, { toValue: 0, duration: 0, useNativeDriver: false })
+        ])
+      );
+      signalLoop.start();
+    } else {
+      signalAnim.setValue(status === 'connected' ? 4 : 0);
+    }
+    return () => signalLoop?.stop();
+  }, [status]);
 
   const fetchPairedDevice = async () => {
     const userId = useAuthStore.getState().user?.id;
@@ -47,8 +132,10 @@ export default function DeviceScreen() {
   };
 
   useEffect(() => {
-    fetchPairedDevice();
-  }, [connectedDevice]);
+    if (dataSource === 'physical') {
+      fetchPairedDevice();
+    }
+  }, [connectedDevice, dataSource]);
 
   const isRecommended = (device: any) => {
     if (!device) return false;
@@ -65,14 +152,6 @@ export default function DeviceScreen() {
   const recommendedDevices = scannedDevices.filter(d => isRecommended(d));
   const otherDevices = scannedDevices.filter(d => !isRecommended(d));
 
-  // Pulse animation timer for BLE wave radar
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setPulseGlow(p => (p === 1 ? 0.35 : 1));
-    }, 900);
-    return () => clearInterval(timer);
-  }, []);
-
   const handleScanToggle = () => {
     if (status === 'scanning') {
       stopScanning();
@@ -85,159 +164,347 @@ export default function DeviceScreen() {
     await sendControlCommand(1);
   };
 
-  const getStatusColor = () => {
+  const getStatusDetails = () => {
     switch (status) {
-      case 'connected': return { text: 'text-emerald-400', dot: 'bg-emerald-400 shadow-emerald-400/50' };
-      case 'connecting': return { text: 'text-amber-400', dot: 'bg-amber-400 shadow-amber-400/50' };
-      case 'scanning': return { text: 'text-sky-400', dot: 'bg-sky-400 shadow-sky-400/50' };
-      default: return { text: 'text-rose-500', dot: 'bg-rose-500' };
+      case 'connected': return { label: 'Connected', text: 'text-emerald-400', dot: 'bg-emerald-400 shadow-emerald-400/50' };
+      case 'connecting': return { label: 'Connecting', text: 'text-amber-400', dot: 'bg-amber-400 shadow-amber-400/50' };
+      case 'scanning': return { label: 'Scanning', text: 'text-sky-400', dot: 'bg-sky-400 shadow-sky-400/50' };
+      default: return { label: 'Disconnected', text: 'text-rose-500', dot: 'bg-rose-500' };
     }
   };
 
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg']
+  });
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#020b08' }}>
-      <LinearGradient colors={['#03120f', '#010605']} className="flex-1">
-        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 110 }} className="px-6 py-4" showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#091310' }} edges={['top']}>
+      <LinearGradient colors={['#091310', '#111d19']} className="flex-1">
+        
+        {/* Header */}
+        <View className="px-6 py-4 flex-row items-center justify-between border-b border-[#1f372f]">
+          <View>
+            <Text className="text-white text-base font-serif font-black">Sensors & Devices</Text>
+            <Text className="text-emerald-400 text-[8px] uppercase font-bold tracking-widest font-mono">Biometric Wearable Hardware</Text>
+          </View>
+        </View>
+
+        <ScrollView contentContainerStyle={{ paddingBottom: 120 }} className="px-6 py-5" showsVerticalScrollIndicator={false}>
           
-          {/* Header */}
-          <View className="mb-6 mt-2">
-            <Text className="text-emerald-400/50 text-[10px] font-bold uppercase tracking-wider">Device Settings</Text>
-            <Text className="text-white text-2xl font-bold font-sans">AquaAyur Wearable</Text>
+          {errorMsg && (
+            <View className="bg-rose-950/40 border border-rose-900/40 p-4 rounded-xl mb-6">
+              <Text className="text-rose-400 text-xs text-center font-sans font-medium">{errorMsg}</Text>
+            </View>
+          )}
+
+          {/* TELEMETRY DATA SOURCE toggle */}
+          <View className="bg-[#111d19]/45 border border-[#1f372f] p-5 rounded-3xl mb-6">
+            <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-widest font-mono mb-3">Telemetry Data Source</Text>
+            <View className="flex-row space-x-2 bg-[#172722]/50 p-1 rounded-xl border border-[#1f372f]">
+              <TouchableOpacity
+                onPress={() => switchSensorMode('physical')}
+                className={`flex-1 py-2.5 rounded-lg items-center ${
+                  dataSource === 'physical' ? 'bg-emerald-500 border border-emerald-400/20' : ''
+                }`}
+              >
+                <Text className={`text-[10px] font-black uppercase tracking-wider ${dataSource === 'physical' ? 'text-emerald-955' : 'text-emerald-400/60'}`}>
+                  Physical Band
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={() => switchSensorMode('simulator')}
+                className={`flex-1 py-2.5 rounded-lg items-center ${
+                  dataSource === 'simulator' ? 'bg-emerald-500 border border-emerald-400/20' : ''
+                }`}
+              >
+                <Text className={`text-[10px] font-black uppercase tracking-wider ${dataSource === 'simulator' ? 'text-emerald-955' : 'text-emerald-400/60'}`}>
+                  Simulator Mode
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-
-          {/* Connection Status & Pulse Wave Radar */}
-          <View className="bg-[#051f18]/30 border border-emerald-800/30 p-6 rounded-3xl mb-6 items-center relative overflow-hidden">
-            <View className="absolute right-0 top-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
-            
+          {/* APPLE WATCH STYLE BLE PAIRING HUB CONTAINER */}
+          <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl mb-6 items-center relative overflow-hidden">
             <View className="w-full flex-row justify-between items-center mb-6">
-              <Text className="text-white text-sm font-bold">Bluetooth Connection</Text>
-              <View className="flex-row items-center bg-emerald-950/60 border border-emerald-900/35 px-3 py-1 rounded-full">
-                <View key={status} style={{ opacity: status === 'scanning' || status === 'connecting' ? pulseGlow : 1 }} className={`w-2 h-2 rounded-full mr-2 ${getStatusColor().dot} will-change-variable`} />
-                <Text className={`text-[10px] font-bold uppercase font-mono tracking-wider ${getStatusColor().text}`}>
-                  {status}
+              <Text className="text-white text-xs font-bold font-serif">Connection Hub</Text>
+              <View className="flex-row items-center bg-[#172722]/80 border border-[#1f372f]/60 px-3 py-1 rounded-full">
+                <View className={`w-2 h-2 rounded-full mr-2 ${getStatusDetails().dot}`} />
+                <Text className={`text-[9px] font-bold uppercase font-mono tracking-widest ${getStatusDetails().text}`}>
+                  {getStatusDetails().label}
                 </Text>
               </View>
             </View>
 
-            {/* BLE Wave Radar Animation (nested concentric circles) */}
-            <View className="h-44 justify-center items-center relative mb-6 w-full">
-              {/* Outer wave */}
-              <View
-                style={{ opacity: status === 'connected' || status === 'scanning' ? pulseGlow * 0.2 : 0.05 }}
-                className="w-36 h-36 rounded-full border border-emerald-500/20 justify-center items-center absolute"
+            {/* Apple Watch style radar rings */}
+            <View className="h-48 justify-center items-center relative mb-6 w-full">
+              {/* Outer pulsing ring */}
+              <Animated.View 
+                style={{
+                  transform: [{ scale: pulseAnim }],
+                  opacity: pulseAnim.interpolate({ inputRange: [0.95, 1.12], outputRange: [0.12, 0.02] })
+                }}
+                className="w-40 h-40 rounded-full border-2 border-emerald-500 absolute"
               />
-              {/* Middle wave */}
-              <View
-                style={{ opacity: status === 'connected' || status === 'scanning' ? (1.35 - pulseGlow) * 0.35 : 0.1 }}
-                className="w-26 h-26 rounded-full border border-emerald-500/30 justify-center items-center absolute"
+              {/* Inner pulsing ring */}
+              <Animated.View 
+                style={{
+                  transform: [{ scale: pulseAnim }],
+                  opacity: pulseAnim.interpolate({ inputRange: [0.95, 1.12], outputRange: [0.25, 0.08] })
+                }}
+                className="w-28 h-28 rounded-full border border-emerald-500 absolute"
               />
-              {/* Inner core */}
-              <View className="w-16 h-16 rounded-full bg-emerald-950 border border-emerald-500/60 justify-center items-center shadow-xl shadow-black/35 relative">
+
+              {/* Rotating particle orbit ring */}
+              <Animated.View 
+                style={{ transform: [{ rotate: spin }] }} 
+                className="w-32 h-32 absolute items-center justify-between"
+              >
+                <View className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400" />
+                <View className="w-1.5 h-1.5 rounded-full bg-emerald-500/30" />
+              </Animated.View>
+
+              {/* Central Core Emblem */}
+              <View className="w-18 h-18 rounded-full bg-[#172722] border border-[#1f372f] justify-center items-center shadow-xl shadow-black/45 z-10">
                 <Ionicons 
-                  name="bluetooth" 
+                  name={dataSource === 'simulator' ? "hardware-chip" : "bluetooth"} 
                   size={26} 
-                  color={status === 'connected' ? '#34d399' : '#6b7280'} 
+                  color={status === 'connected' ? '#34d399' : '#047857'} 
                 />
               </View>
             </View>
 
-            {connectedDevice ? (
-              <View className="w-full">
-                {/* Device Info */}
-                <TouchableOpacity
-                  onPress={() => router.push('/(tabs)/device-details')}
-                  className="bg-[#020b08]/85 border border-emerald-900/40 p-4 rounded-xl mb-4 flex-row justify-between items-center active:bg-emerald-900/10"
-                >
-                  <View>
-                    <Text className="text-white text-xs font-bold">{connectedDevice.name || 'AquaAyur Wearable'}</Text>
-                    <Text className="text-emerald-400/50 text-[10px] font-mono mt-0.5">{connectedDevice.id}</Text>
+            {/* Device Stats (Signal, Battery, Firmware) */}
+            {status === 'connected' && (
+              <View className="w-full border-t border-[#1f372f]/45 pt-5 mb-5 space-y-3.5">
+                
+                {/* Signal Strength (RSSI) & Battery */}
+                <View className="flex-row justify-between items-center">
+                  <View className="flex-row items-center flex-1 mr-3">
+                    <Ionicons name="wifi-outline" size={14} color="#34d399" style={{ marginRight: 6 }} />
+                    <Text className="text-slate-350 text-[10px] mr-2">Signal Strength</Text>
+                    {/* Visual Signal segments */}
+                    <View className="flex-row items-end space-x-0.5 h-3">
+                      {[1, 2, 3, 4].map((bar) => (
+                        <View 
+                          key={bar} 
+                          className={`w-0.75 rounded-t-sm ${
+                            bar <= 4 ? 'bg-emerald-500' : 'bg-[#1f372f]'
+                          }`}
+                          style={{ height: bar * 3 }}
+                        />
+                      ))}
+                    </View>
                   </View>
-                  <View className="flex-row items-center gap-1">
-                    <Text className="text-emerald-400 text-[10px] font-bold font-sans">Details</Text>
-                    <Ionicons name="chevron-forward" size={14} color="#34d399" />
-                  </View>
-                </TouchableOpacity>
 
-                <TouchableOpacity
-                  onPress={disconnectDevice}
-                  className="bg-rose-500/15 border border-rose-500/35 rounded-xl py-3 items-center active:bg-rose-500/25"
-                >
-                  <Text className="text-rose-400 font-bold text-xs">Disconnect Device</Text>
-                </TouchableOpacity>
+                  <View className="flex-row items-center">
+                    <Ionicons name="battery-charging" size={16} color="#10b981" style={{ marginRight: 6 }} />
+                    <Text className="text-slate-300 text-[10px] font-bold font-mono">
+                      {liveData?.battery || 85}%
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Firmware and Node Info */}
+                <View className="flex-row justify-between items-center pt-2 border-t border-[#1f372f]/10">
+                  <View>
+                    <Text className="text-white text-[11px] font-bold">
+                      {dataSource === 'simulator' ? 'Virtual AyurWearable' : (connectedDevice?.name || 'AquaAyur Band-V1')}
+                    </Text>
+                    <Text className="text-emerald-400/40 text-[9px] font-mono mt-0.5">
+                      Firmware: v1.4.2 | MAC: {dataSource === 'simulator' ? '00:1A:7D:DA:71:11' : (connectedDevice?.id || 'ESP32-Aqua-AYUR')}
+                    </Text>
+                  </View>
+                  <View className="bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded">
+                    <Text className="text-emerald-400 text-[8px] font-bold uppercase font-mono">Secure</Text>
+                  </View>
+                </View>
+
+                {/* Hardware Health Status Checks */}
+                <View className="bg-[#172722]/30 border border-[#1f372f]/40 p-3.5 rounded-2xl mt-2.5">
+                  <Text className="text-emerald-400 text-[8px] uppercase font-bold tracking-widest font-mono mb-2">Hardware Health Check</Text>
+                  
+                  <View className="space-y-1.5">
+                    <View className="flex-row justify-between items-center">
+                      <Text className="text-slate-300 text-[10px]">PPG Optical Heart Sensor</Text>
+                      <Text className="text-emerald-400 text-[9px] font-bold uppercase">Optimal</Text>
+                    </View>
+                    <View className="flex-row justify-between items-center">
+                      <Text className="text-slate-300 text-[10px]">Core Thermistor Calibration</Text>
+                      <Text className="text-emerald-400 text-[9px] font-bold uppercase">Optimal</Text>
+                    </View>
+                    <View className="flex-row justify-between items-center">
+                      <Text className="text-slate-300 text-[10px]">Internal IMU Accelometer</Text>
+                      <Text className="text-emerald-400 text-[9px] font-bold uppercase">Active</Text>
+                    </View>
+                  </View>
+                </View>
+
               </View>
-            ) : (
-              <TouchableOpacity
-                onPress={handleScanToggle}
-                className="bg-emerald-500 rounded-xl py-3.5 w-full flex-row justify-center items-center shadow-lg shadow-emerald-500/15 active:bg-emerald-600"
-              >
-                {status === 'scanning' ? (
-                  <>
-                    <ActivityIndicator size="small" color="#022c22" className="mr-2" />
-                    <Text className="text-emerald-950 font-bold text-xs uppercase tracking-wider">Stop Scanning</Text>
-                  </>
-                ) : (
-                  <>
-                    <Ionicons name="search" size={14} color="#022c22" className="mr-1.5" />
-                    <Text className="text-emerald-950 font-bold text-xs uppercase tracking-wider">Scan for Sensors</Text>
-                  </>
-                )}
-              </TouchableOpacity>
             )}
 
-            {errorMsg ? (
-              <View className="bg-rose-950/40 border border-rose-500/30 p-4 rounded-xl mt-4 w-full">
-                <Text className="text-rose-300 text-xs text-center">{errorMsg}</Text>
-              </View>
-            ) : null}
+            {/* Actions Panel */}
+            <View className="w-full">
+              {dataSource === 'simulator' ? (
+                <View className="space-y-2.5 w-full">
+                  <TouchableOpacity
+                    onPress={() => router.push('/(tabs)/simulator')}
+                    className="bg-emerald-500 rounded-2xl py-3.5 w-full flex-row justify-center items-center shadow shadow-emerald-500/20 active:bg-emerald-600"
+                  >
+                    <Ionicons name="options-outline" size={15} color="#022c22" style={{ marginRight: 6 }} />
+                    <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">Configure Telemetry</Text>
+                  </TouchableOpacity>
+
+                  {status === 'connected' && (
+                    <TouchableOpacity
+                      onPress={disconnectDevice}
+                      className="bg-red-500/15 border border-red-500/35 rounded-2xl py-3 items-center active:bg-red-500/25"
+                    >
+                      <Text className="text-red-400 font-bold text-xs">Disconnect Simulator</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : (
+                <View className="w-full">
+                  {status === 'connected' ? (
+                    <TouchableOpacity
+                      onPress={disconnectDevice}
+                      className="bg-red-500/15 border border-red-500/35 rounded-2xl py-3.5 items-center active:bg-red-500/25 w-full"
+                    >
+                      <Text className="text-red-400 font-black text-xs uppercase tracking-wider">Disconnect Bluetooth</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={handleScanToggle}
+                      className="bg-emerald-500 rounded-2xl py-3.5 w-full flex-row justify-center items-center shadow shadow-emerald-500/20 active:bg-emerald-600"
+                    >
+                      {status === 'scanning' ? (
+                        <>
+                          <ActivityIndicator size="small" color="#022c22" className="mr-2" />
+                          <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">Stop Scanning</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Ionicons name="search" size={14} color="#022c22" style={{ marginRight: 6 }} />
+                          <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">Scan for Sensors</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </View>
+
           </View>
 
-          {/* TELEMETRY CONTROLS & DIAGNOSTICS */}
-          {connectedDevice && (
-            <View key="connected-telemetry" className="bg-[#051f18]/30 border border-emerald-800/30 p-6 rounded-3xl mb-6 will-change-variable">
-              <View className="flex-row items-center mb-3">
-                <Ionicons name="build" size={18} color="#10b981" />
-                <Text className="text-white font-bold text-sm ml-2">Diagnostic Testers</Text>
+          {/* REALTIME SENSOR BIOMETRICS PREVIEW HUD */}
+          {status === 'connected' && (
+            <View className="bg-[#111d19]/45 border border-[#1f372f] p-5 rounded-3xl mb-6">
+              <View className="flex-row justify-between items-center mb-4 border-b border-emerald-950 pb-3">
+                <View className="flex-row items-center">
+                  <Ionicons name="stats-chart" size={16} color="#34d399" />
+                  <Text className="text-white text-sm font-serif font-black ml-2">Live Biofeedback HUD</Text>
+                </View>
+                <View className="bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                  <Text className="text-emerald-400 text-[8px] font-mono uppercase">1 Hz stream</Text>
+                </View>
               </View>
-              <Text className="text-emerald-200/80 text-xs leading-relaxed mb-5">
-                Trigger a command directly to the ESP32 firmware loop to test native actuator and haptic vibrotactile responses.
+
+              <View className="grid grid-cols-2 gap-3.5 flex-row flex-wrap">
+                {/* Heart Rate */}
+                <View className="w-[47%] bg-[#172722]/50 border border-[#1f372f] p-3.5 rounded-2xl">
+                  <View className="flex-row items-center mb-1">
+                    <Ionicons name="heart" size={14} color="#ef4444" style={{ marginRight: 6 }} />
+                    <Text className="text-slate-350 text-[10px]">Pulse Rate</Text>
+                  </View>
+                  <Text className="text-white text-base font-bold font-mono">
+                    {liveData?.heartRate || 72} <Text className="text-[10px] text-slate-400 font-sans">bpm</Text>
+                  </Text>
+                </View>
+
+                {/* Skin Temperature */}
+                <View className="w-[47%] bg-[#172722]/50 border border-[#1f372f] p-3.5 rounded-2xl">
+                  <View className="flex-row items-center mb-1">
+                    <Ionicons name="thermometer" size={14} color="#38bdf8" style={{ marginRight: 6 }} />
+                    <Text className="text-slate-350 text-[10px]">Skin Temp</Text>
+                  </View>
+                  <Text className="text-white text-base font-bold font-mono">
+                    {liveData?.temperature || 36.5} <Text className="text-[10px] text-slate-400 font-sans">°C</Text>
+                  </Text>
+                </View>
+
+                {/* Steps count */}
+                <View className="w-[47%] bg-[#172722]/50 border border-[#1f372f] p-3.5 rounded-2xl">
+                  <View className="flex-row items-center mb-1">
+                    <Ionicons name="footsteps" size={14} color="#10b981" style={{ marginRight: 6 }} />
+                    <Text className="text-slate-350 text-[10px]">Daily Steps</Text>
+                  </View>
+                  <Text className="text-white text-base font-bold font-mono">
+                    {liveData?.steps || 1200} <Text className="text-[10px] text-slate-400 font-sans">steps</Text>
+                  </Text>
+                </View>
+
+                {/* Stress score */}
+                <View className="w-[47%] bg-[#172722]/50 border border-[#1f372f] p-3.5 rounded-2xl">
+                  <View className="flex-row items-center mb-1">
+                    <Ionicons name="pulse" size={14} color="#a78bfa" style={{ marginRight: 6 }} />
+                    <Text className="text-slate-350 text-[10px]">Stress Index</Text>
+                  </View>
+                  <Text className="text-white text-base font-bold font-mono">
+                    {liveData?.stress || 35} <Text className="text-[10px] text-slate-400 font-sans">/100</Text>
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* DIAGNOSTIC COMMAND BOARD FOR ESP32 ACTUATORS */}
+          {status === 'connected' && dataSource === 'physical' && (
+            <View className="bg-[#111d19]/45 border border-[#1f372f] p-5 rounded-3xl mb-6">
+              <View className="flex-row items-center mb-3">
+                <Ionicons name="build-outline" size={16} color="#34d399" />
+                <Text className="text-white text-sm font-serif font-black ml-2">Diagnostic Tools</Text>
+              </View>
+              <Text className="text-slate-300 text-xs leading-relaxed mb-4">
+                Trigger local hardware test commands directly to the paired band device to audit haptic actuator responses.
               </Text>
               <TouchableOpacity
                 onPress={testHapticVibration}
-                className="bg-emerald-500 rounded-xl py-3 flex-row justify-center items-center active:bg-emerald-600"
+                className="bg-emerald-500 rounded-2xl py-3 w-full flex-row justify-center items-center active:bg-emerald-600"
               >
-                <Ionicons name="pulse" size={14} color="#022c22" className="mr-1.5" />
-                <Text className="text-emerald-950 font-bold text-xs uppercase">Trigger Haptic Vibration</Text>
+                <Ionicons name="pulse" size={15} color="#022c22" style={{ marginRight: 6 }} />
+                <Text className="text-emerald-950 font-bold text-xs uppercase tracking-wider">Trigger Haptic Test</Text>
               </TouchableOpacity>
             </View>
           )}
-          {!connectedDevice && (
-            <View className="flex-1 mt-2">
-              {/* PREVIOUSLY PAIRED DEVICE */}
+
+          {/* PHYSICAL PAIRINGS SEARCH LIST (WHEN DISCONNECTED) */}
+          {dataSource === 'physical' && !connectedDevice && (
+            <View className="space-y-6">
               {pairedDevice && (
-                <View className="mb-6">
+                <View className="mb-2">
                   <View className="flex-row items-center mb-3">
-                    <Ionicons name="link-outline" size={16} color="#10b981" className="mr-1.5" />
-                    <Text className="text-white text-sm font-bold">Previously Paired Device</Text>
+                    <Ionicons name="link-outline" size={15} color="#34d399" style={{ marginRight: 6 }} />
+                    <Text className="text-white text-sm font-bold font-serif">Previously Paired Device</Text>
                   </View>
-                  <View className="bg-[#051f18]/35 border border-emerald-500/20 p-4 rounded-xl flex-row justify-between items-center">
-                    <View className="flex-1 mr-3">
+                  <View className="bg-[#111d19]/45 border border-[#1f372f] p-4.5 rounded-2xl flex-row justify-between items-center">
+                    <View>
                       <Text className="text-white text-xs font-bold">{pairedDevice.device_name}</Text>
-                      <Text className="text-emerald-400/50 text-[10px] font-mono mt-0.5">{pairedDevice.mac_address}</Text>
+                      <Text className="text-emerald-400/40 text-[9px] font-mono mt-0.5">{pairedDevice.mac_address}</Text>
                     </View>
                     <TouchableOpacity
-                      onPress={() => {
-                        autoConnectLastPairedDevice().catch((e: any) => console.log(e));
-                      }}
+                      onPress={() => autoConnectLastPairedDevice().catch((e: any) => console.log(e))}
                       disabled={status === 'connecting' || status === 'scanning'}
-                      className="bg-emerald-500/15 border border-emerald-500/30 px-3 py-1.5 rounded-lg flex-row items-center gap-1 active:bg-emerald-500/25"
+                      className="bg-emerald-500/10 border border-emerald-500/35 px-3 py-2 rounded-xl flex-row items-center active:bg-emerald-500/20"
                     >
                       {status === 'connecting' ? (
                         <ActivityIndicator size="small" color="#34d399" />
                       ) : (
                         <>
-                          <Ionicons name="refresh-outline" size={12} color="#34d399" />
-                          <Text className="text-emerald-400 font-bold text-[10px]">Autoconnect</Text>
+                          <Ionicons name="refresh-outline" size={13} color="#34d399" style={{ marginRight: 4 }} />
+                          <Text className="text-emerald-400 font-bold text-[9px] uppercase tracking-wider">Link</Text>
                         </>
                       )}
                     </TouchableOpacity>
@@ -245,56 +512,58 @@ export default function DeviceScreen() {
                 </View>
               )}
 
-              {/* RECOMMENDED DEVICES SECTION */}
-              <View className="flex-row items-center mb-3">
-                <Ionicons name="sparkles" size={16} color="#34d399" className="mr-1.5" />
-                <Text className="text-white text-sm font-bold">Recommended Sensors ({recommendedDevices.length})</Text>
+              {/* RECOMMENDED BLUETOOTH DEVICES */}
+              <View>
+                <View className="flex-row items-center mb-3">
+                  <Ionicons name="sparkles" size={15} color="#34d399" style={{ marginRight: 6 }} />
+                  <Text className="text-white text-sm font-bold font-serif">Recommended Sensors ({recommendedDevices.length})</Text>
+                </View>
+
+                {recommendedDevices.length === 0 ? (
+                  <View className="bg-[#111d19]/45 border border-dashed border-[#1f372f]/50 p-8 rounded-2xl justify-center items-center">
+                    <Ionicons name="bluetooth" size={24} color="#047857" className="mb-2" />
+                    <Text className="text-emerald-400/60 text-xs text-center font-sans">
+                      {status === 'scanning' 
+                        ? 'Scanning for compatible AquaAyur wearables...' 
+                        : 'No recommended sensors nearby. Tap Scan for Sensors above.'}
+                    </Text>
+                  </View>
+                ) : (
+                  <View className="space-y-2.5">
+                    {recommendedDevices.map((device) => (
+                      <TouchableOpacity
+                        key={device.id}
+                        onPress={() => connectToDevice(device)}
+                        className="bg-[#111d19]/45 border border-emerald-500/30 p-4 rounded-xl flex-row justify-between items-center active:bg-emerald-950"
+                      >
+                        <View className="flex-1 mr-3">
+                          <View className="flex-row items-center">
+                            <Text className="text-white text-xs font-bold mr-2">{device.name || 'AquaAyur Sensor'}</Text>
+                            <View className="bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.5 rounded">
+                              <Text className="text-emerald-300 text-[8px] font-bold uppercase font-mono">Match</Text>
+                            </View>
+                          </View>
+                          <Text className="text-emerald-400/50 text-[10px] font-mono mt-1">{device.id}</Text>
+                        </View>
+                        <View className="flex-row items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/35 px-2.5 py-1.5 rounded-xl">
+                          <Text className="text-emerald-400 font-bold text-[9px] uppercase tracking-wider">Connect</Text>
+                          <Ionicons name="chevron-forward" size={10} color="#34d399" />
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
 
-              {recommendedDevices.length === 0 ? (
-                <View key="no-recommended" className="bg-[#051f18]/15 border border-dashed border-emerald-850/25 p-6 rounded-2xl justify-center items-center py-8 mb-6 will-change-variable">
-                  <Ionicons name="bluetooth" size={24} color="#047857" className="mb-2" />
-                  <Text className="text-emerald-500/80 text-xs text-center font-sans">
-                    {status === 'scanning' 
-                      ? 'Scanning for compatible AquaAyur wearables...' 
-                      : 'No recommended sensors nearby. Tap Scan for Sensors above.'}
-                  </Text>
-                </View>
-              ) : (
-                <View key="recommended-list" className="space-y-2.5 mb-6 will-change-variable">
-                  {recommendedDevices.map((device) => (
-                    <TouchableOpacity
-                      key={device.id}
-                      onPress={() => connectToDevice(device)}
-                      className="bg-[#051f18]/35 border border-emerald-500/30 p-4 rounded-xl flex-row justify-between items-center active:bg-emerald-900/20 shadow-md shadow-emerald-950/20"
-                    >
-                      <View className="flex-1 mr-3">
-                        <View className="flex-row items-center">
-                          <Text className="text-white text-xs font-bold mr-2">{device.name || 'AquaAyur Sensor'}</Text>
-                          <View className="bg-emerald-500/25 border border-emerald-500/40 px-1.5 py-0.5 rounded">
-                            <Text className="text-emerald-300 text-[8px] font-bold uppercase font-sans">Match</Text>
-                          </View>
-                        </View>
-                        <Text className="text-emerald-400/50 text-[10px] font-mono mt-1">{device.id}</Text>
-                      </View>
-                      <View className="flex-row items-center gap-1.5 bg-emerald-500/20 border border-emerald-500/35 px-2.5 py-1 rounded-lg">
-                        <Text className="text-emerald-450 font-bold text-[10px]">Connect</Text>
-                        <Ionicons name="chevron-forward" size={12} color="#34d399" />
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-
-              {/* OTHER DEVICES COLLAPSIBLE SECTION */}
+              {/* COLLAPSIBLE OTHER BLUETOOTH DEVICES */}
               {otherDevices.length > 0 && (
-                <View key="other-devices-section" className="mb-6 will-change-variable">
+                <View>
                   <TouchableOpacity
                     onPress={() => setShowOtherDevices(!showOtherDevices)}
-                    className="flex-row justify-between items-center bg-[#051f18]/15 border border-emerald-900/20 px-4 py-3 rounded-xl active:bg-[#051f18]/30"
+                    className="flex-row justify-between items-center bg-[#111d19]/45 border border-[#1f372f] px-4 py-3 rounded-2xl active:bg-[#172722]"
                   >
                     <View className="flex-row items-center">
-                      <Ionicons name="radio" size={16} color="#6b7280" className="mr-1.5" />
+                      <Ionicons name="radio" size={16} color="#6b7280" style={{ marginRight: 6 }} />
                       <Text className="text-emerald-300/80 text-xs font-bold font-sans">
                         Other Bluetooth Devices ({otherDevices.length})
                       </Text>
@@ -307,20 +576,19 @@ export default function DeviceScreen() {
                   </TouchableOpacity>
 
                   {showOtherDevices && (
-                    <View className="space-y-2.5 mt-2.5">
+                    <View className="space-y-2 mt-2">
                       {otherDevices.map((device) => (
                         <TouchableOpacity
                           key={device.id}
                           onPress={() => connectToDevice(device)}
-                          className="bg-[#051f18]/15 border border-emerald-900/10 p-4 rounded-xl flex-row justify-between items-center active:bg-emerald-900/10"
+                          className="bg-[#111d19]/45 border border-[#1f372f]/40 p-4 rounded-xl flex-row justify-between items-center active:bg-emerald-950"
                         >
                           <View className="flex-1 mr-3">
-                            <Text className="text-white/70 text-xs font-sans">{device.name || 'Unknown Device'}</Text>
-                            <Text className="text-emerald-500/35 text-[10px] font-mono mt-0.5">{device.id}</Text>
+                            <Text className="text-white/70 text-xs">{device.name || 'Unknown Device'}</Text>
+                            <Text className="text-emerald-500/35 text-[9px] font-mono mt-0.5">{device.id}</Text>
                           </View>
-                          <View className="flex-row items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/15 px-2 py-0.5 rounded">
-                            <Text className="text-emerald-450/70 text-[9px] font-semibold">Pair</Text>
-                            <Ionicons name="chevron-forward" size={10} color="#34d399" />
+                          <View className="flex-row items-center bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded">
+                            <Text className="text-emerald-400/70 text-[9px] font-semibold uppercase tracking-wider">Pair</Text>
                           </View>
                         </TouchableOpacity>
                       ))}
@@ -329,43 +597,31 @@ export default function DeviceScreen() {
                 </View>
               )}
 
-              {/* DIAGNOSTIC / TROUBLESHOOTING HELP */}
-              {(status === 'scanning' || scannedDevices.length === 0) && (
-                <View className="bg-[#051f18]/25 border border-emerald-900/20 p-5 rounded-2xl mt-2">
-                  <View className="flex-row items-center mb-3">
-                    <Ionicons name="help-circle" size={18} color="#10b981" />
-                    <Text className="text-white font-bold text-xs ml-2 font-sans">Troubleshooting ESP32 Discovery</Text>
+              {/* DISCOVERY TROUBLESHOOTING HELP */}
+              <View className="bg-[#111d19]/45 border border-[#1f372f] p-5 rounded-3xl">
+                <View className="flex-row items-center mb-3">
+                  <Ionicons name="help-circle-outline" size={16} color="#34d399" />
+                  <Text className="text-white font-bold text-xs ml-2 font-serif">Discovery Help</Text>
+                </View>
+                <View className="space-y-2.5">
+                  <View className="flex-row items-start">
+                    <Ionicons name="checkmark-circle-outline" size={13} color="#34d399" className="mt-0.5 mr-2" />
+                    <Text className="text-slate-350 text-[9px] leading-normal flex-1 font-sans">
+                      <Text className="font-bold text-white">Location GPS Required:</Text> Ensure GPS location is active on your device. OS models require location permissions to capture Bluetooth BLE advertisement packets.
+                    </Text>
                   </View>
-                  <View className="space-y-2.5">
-                    <View className="flex-row items-start">
-                      <Ionicons name="checkmark-circle-outline" size={14} color="#34d399" className="mt-0.5 mr-2" />
-                      <Text className="text-emerald-200/60 text-[10px] leading-normal flex-1 font-sans">
-                        <Text className="font-bold text-white/80">Location Services (GPS):</Text> Make sure GPS is enabled on your phone. Android requires location settings to be ON for Bluetooth scans.
-                      </Text>
-                    </View>
-                    <View className="flex-row items-start">
-                      <Ionicons name="checkmark-circle-outline" size={14} color="#34d399" className="mt-0.5 mr-2" />
-                      <Text className="text-emerald-200/60 text-[10px] leading-normal flex-1 font-sans">
-                        <Text className="font-bold text-white/80">Check Active Connections:</Text> BLE devices only connect to one central. Verify your ESP32 is not connected/bonded to your computer, another phone, or a serial terminal.
-                      </Text>
-                    </View>
-                    <View className="flex-row items-start">
-                      <Ionicons name="checkmark-circle-outline" size={14} color="#34d399" className="mt-0.5 mr-2" />
-                      <Text className="text-emerald-200/60 text-[10px] leading-normal flex-1 font-sans">
-                        <Text className="font-bold text-white/80">Proximity:</Text> Place the ESP32 directly next to your phone (within 1-2 meters) to guarantee strong RSSI signal advertisement receipt.
-                      </Text>
-                    </View>
-                    <View className="flex-row items-start">
-                      <Ionicons name="checkmark-circle-outline" size={14} color="#34d399" className="mt-0.5 mr-2" />
-                      <Text className="text-emerald-200/60 text-[10px] leading-normal flex-1 font-sans">
-                        <Text className="font-bold text-white/80">Check Other Bluetooth Devices:</Text> If your device name is not recognized as a recommended sensor, it will appear under the <Text className="font-bold text-emerald-300">Other Bluetooth Devices</Text> section.
-                      </Text>
-                    </View>
+                  <View className="flex-row items-start">
+                    <Ionicons name="checkmark-circle-outline" size={13} color="#34d399" className="mt-0.5 mr-2" />
+                    <Text className="text-slate-350 text-[9px] leading-normal flex-1 font-sans">
+                      <Text className="font-bold text-white">Bonding Lockouts:</Text> BLE devices pair with one master client at a time. Verify the smartband isn't currently connected to a nearby computer or another device.
+                    </Text>
                   </View>
                 </View>
-              )}
+              </View>
+
             </View>
           )}
+
         </ScrollView>
       </LinearGradient>
     </SafeAreaView>

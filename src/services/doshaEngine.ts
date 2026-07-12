@@ -1,34 +1,32 @@
 import { supabase } from './supabase';
 
-// -------------------------------------------------------------------------
-// Coefficients and Weights Definitions
-// -------------------------------------------------------------------------
 const WEIGHTS = {
   VATA: {
-    hrv: 0.40,
+    hrv: 0.35,
     tempCold: 0.15,
-    sleepPoor: 0.30,
-    stepsErratic: 0.15,
-    tasteBitterPungentAstringent: 0.30,
-    hydrationLow: 0.20
+    sleepPoor: 0.20,
+    stepsErratic: 0.10,
+    tasteBitterPungentAstringent: 0.10,
+    hydrationLow: 0.05,
+    stressHigh: 0.05
   },
   PITTA: {
-    hrRestHigh: 0.35,
-    tempHot: 0.40,
-    stepsHigh: 0.25,
-    tasteSourSaltyPungent: 0.30
+    hrRestHigh: 0.30,
+    tempHot: 0.30,
+    stepsHigh: 0.15,
+    tasteSourSaltyPungent: 0.15,
+    stressHigh: 0.10
   },
   KAPHA: {
-    hrRestLow: 0.35,
+    hrRestLow: 0.30,
     tempCold: 0.15,
-    sleepLong: 0.30,
-    stepsSedentary: 0.30,
-    tasteSweetSourSalty: 0.30,
-    hydrationOver: 0.10
+    sleepLong: 0.20,
+    stepsSedentary: 0.20,
+    tasteSweetSourSalty: 0.10,
+    hydrationOver: 0.05
   }
 };
 
-// Map profiles' dominant_dosha to base weights
 export const DOSHA_BASELINES: Record<string, { vata: number; pitta: number; kapha: number }> = {
   vata: { vata: 50.0, pitta: 25.0, kapha: 25.0 },
   pitta: { vata: 25.0, pitta: 50.0, kapha: 25.0 },
@@ -39,6 +37,13 @@ export const DOSHA_BASELINES: Record<string, { vata: number; pitta: number; kaph
   tridoshic: { vata: 33.3, pitta: 33.3, kapha: 33.3 },
   default: { vata: 33.3, pitta: 33.3, kapha: 33.3 }
 };
+
+export interface ExplainableFactor {
+  name: string;
+  value: string;
+  impact: { vata: number; pitta: number; kapha: number };
+  explanation: string;
+}
 
 export interface CalculatedDoshaState {
   vata: number;
@@ -53,13 +58,16 @@ export interface CalculatedDoshaState {
   explanationSummary: {
     aggravating: string[];
     pacifying: string[];
+    factors: ExplainableFactor[];
+    reasoning: string;
+    prediction: {
+      tomorrowFollow: { vata: number; pitta: number; kapha: number };
+      tomorrowIgnore: { vata: number; pitta: number; kapha: number };
+    };
   };
   trendAlert: string;
 }
 
-/**
- * Validate input metrics to ensure biological plausibility before calculations.
- */
 export function validateInputTelemetry(metrics: {
   heartRate: number | null;
   temperature: number | null;
@@ -78,9 +86,6 @@ export function validateInputTelemetry(metrics: {
   }
 }
 
-/**
- * Validate output dynamic dosha states.
- */
 export function validateOutputDosha(state: { vata: number; pitta: number; kapha: number }) {
   if (state.vata < 0 || state.pitta < 0 || state.kapha < 0) {
     throw new Error('Computed dosha percentages cannot be negative.');
@@ -91,19 +96,15 @@ export function validateOutputDosha(state: { vata: number; pitta: number; kapha:
   }
 }
 
-/**
- * Detect daily dynamic trends across the past week's calculated states.
- */
 export async function detectDoshaTrends(
   userId: string,
   current: { vata: number; pitta: number; kapha: number }
 ): Promise<string> {
-  const history = await getDoshaHistory(userId, 5); // Fetch past 5 records
+  const history = await getDoshaHistory(userId, 5);
   if (history.length < 3) {
     return 'Establishing baseline trend analysis... More daily logs required.';
   }
 
-  // Calculate historical averages of previous days
   const prevVata = history.reduce((sum, r) => sum + Number(r.vata_percentage), 0) / history.length;
   const prevPitta = history.reduce((sum, r) => sum + Number(r.pitta_percentage), 0) / history.length;
   const prevKapha = history.reduce((sum, r) => sum + Number(r.kapha_percentage), 0) / history.length;
@@ -114,13 +115,13 @@ export async function detectDoshaTrends(
 
   const trends: string[] = [];
   if (vataDiff > 5) {
-    trends.push('Vata is consistently rising (+Air/Ether). Focus on grounding, warm teas, and rest.');
+    trends.push('Vata is rising (+Air). Grounding practices and hydration recommended.');
   }
   if (pittaDiff > 5) {
-    trends.push('Pitta is rising (+Fire). Cooling hydration, sweet fruits, and quiet relaxation recommended.');
+    trends.push('Pitta is rising (+Fire). Cooling foods and rest needed.');
   }
   if (kaphaDiff > 5) {
-    trends.push('Kapha is rising (+Earth/Water). Brisk exercises, light diets, and spices needed to clear stagnation.');
+    trends.push('Kapha is rising (+Earth). Dynamic movement and drying warm spices recommended.');
   }
 
   if (trends.length === 0) {
@@ -129,17 +130,13 @@ export async function detectDoshaTrends(
   return trends.join(' ');
 }
 
-/**
- * Calculates user's dynamic dosha levels for a given calendar date (YYYY-MM-DD).
- * Fetches metrics logs from Supabase, processes features, scales deltas, and saves the output.
- */
 export async function calculateDailyDosha(userId: string, dateStr: string): Promise<CalculatedDoshaState> {
   const startOfDay = new Date(`${dateStr}T00:00:00`);
   const endOfDay = new Date(`${dateStr}T23:59:59.999`);
   const dayStart = startOfDay.toISOString();
   const dayEnd = endOfDay.toISOString();
 
-  // 1. Fetch user baseline profile
+  // 1. Fetch baseline user profile
   const { data: profile } = await supabase
     .from('profiles')
     .select('dominant_dosha')
@@ -149,14 +146,15 @@ export async function calculateDailyDosha(userId: string, dateStr: string): Prom
   const dominantDosha = profile?.dominant_dosha || 'default';
   const baseline = DOSHA_BASELINES[dominantDosha] || DOSHA_BASELINES.default;
 
-  // 2. Fetch daily biometrics, sleep, nutrition, and hydration in parallel
+  // 2. Fetch daily metrics & lifestyle logs
   const [
     hrResponse,
     tempResponse,
     actResponse,
     sleepResponse,
     waterResponse,
-    foodResponse
+    foodResponse,
+    lifeResponse
   ] = await Promise.all([
     supabase.from('heart_rate_logs').select('bpm').eq('user_id', userId).gte('timestamp', dayStart).lte('timestamp', dayEnd),
     supabase.from('temperature_logs').select('temperature_celsius').eq('user_id', userId).gte('timestamp', dayStart).lte('timestamp', dayEnd),
@@ -169,47 +167,42 @@ export async function calculateDailyDosha(userId: string, dateStr: string): Prom
       nutrition_analysis (
         ayurvedic_taste
       )
-    `).eq('user_id', userId).gte('timestamp', dayStart).lte('timestamp', dayEnd)
+    `).eq('user_id', userId).gte('timestamp', dayStart).lte('timestamp', dayEnd),
+    supabase.from('lifestyle').select('stress_level').eq('user_id', userId).order('updated_at', { ascending: false }).limit(1).maybeSingle()
   ]);
 
-  // 3. Process biometrics metrics
   const hrLogs = hrResponse.data || [];
   const tempLogs = tempResponse.data || [];
   const actLogs = actResponse.data || [];
   const sleepLogs = sleepResponse.data || [];
   const waterLogs = waterResponse.data || [];
   const foodLogs = foodResponse.data || [];
+  const stressLevel = lifeResponse.data?.stress_level || 'medium';
 
-  // Resting HR details
+  // Process core biometric factors
   const hrValues = hrLogs.map(l => l.bpm);
   const avgHr = hrValues.length > 0 ? Math.round(hrValues.reduce((s, v) => s + v, 0) / hrValues.length) : null;
-  const hrRestBase = 70; // target baseline rest HR
+  const hrRestBase = 70;
 
-  // HR Variability (approximation: standard deviation of heart rate logs)
   let hrvVal = 0;
   if (hrValues.length > 1 && avgHr !== null) {
     const variance = hrValues.reduce((s, v) => s + Math.pow(v - avgHr, 2), 0) / (hrValues.length - 1);
     hrvVal = Math.sqrt(variance);
   }
 
-  // Skin Temperature
   const tempValues = tempLogs.map(l => Number(l.temperature_celsius));
   const avgTemp = tempValues.length > 0 ? Number((tempValues.reduce((s, v) => s + v, 0) / tempValues.length).toFixed(1)) : null;
   const tempBase = 36.5;
 
-  // Sleep
   const totalSleepMinutes = sleepLogs.reduce((s, l) => s + l.duration_minutes, 0);
-  const avgSleepScore = sleepLogs.length > 0 ? sleepLogs.reduce((s, l) => s + l.sleep_score, 0) / sleepLogs.length : 100;
+  const avgSleepScore = sleepLogs.length > 0 ? sleepLogs.reduce((s, l) => s + l.sleep_score, 0) / sleepLogs.length : 80;
 
-  // Steps & activity
   const totalSteps = actLogs.reduce((s, l) => s + l.steps_count, 0);
   const sedentaryCount = actLogs.filter(l => l.activity_type === 'sedentary').length;
   const activityRatio = actLogs.length > 0 ? (actLogs.length - sedentaryCount) / actLogs.length : 0.5;
 
-  // Hydration
   const totalWaterMl = waterLogs.reduce((s, l) => s + l.amount_ml, 0);
 
-  // Validate inputs
   validateInputTelemetry({
     heartRate: avgHr,
     temperature: avgTemp,
@@ -218,21 +211,11 @@ export async function calculateDailyDosha(userId: string, dateStr: string): Prom
     waterMl: totalWaterMl
   });
 
-  // Nutrition tastes proportions
-  const tastesCounts: Record<string, number> = {
-    sweet: 0,
-    sour: 0,
-    salty: 0,
-    bitter: 0,
-    pungent: 0,
-    astringent: 0
-  };
-
+  // Nutrition Taste profiles
+  const tastesCounts: Record<string, number> = { sweet: 0, sour: 0, salty: 0, bitter: 0, pungent: 0, astringent: 0 };
   foodLogs.forEach((f: any) => {
     const taste = f.nutrition_analysis?.ayurvedic_taste;
-    if (taste && taste in tastesCounts) {
-      tastesCounts[taste] += 1;
-    }
+    if (taste && taste in tastesCounts) tastesCounts[taste] += 1;
   });
 
   const totalTasteLogs = Object.values(tastesCounts).reduce((s, v) => s + v, 0);
@@ -246,111 +229,243 @@ export async function calculateDailyDosha(userId: string, dateStr: string): Prom
   };
 
   // -------------------------------------------------------------------------
-  // 4. Feature Engineering Indices Mapping & Explainability Trace
+  // Explainable Scoring Engine Contribution Tracker
   // -------------------------------------------------------------------------
+  const factors: ExplainableFactor[] = [];
   const aggravating: string[] = [];
   const pacifying: string[] = [];
 
-  // Vata Features
+  // 1. Heart Rate (HR & HRV)
   const f_hrv = Math.min(1.0, hrvVal / 15.0);
-  if (f_hrv > 0.5) aggravating.push('High HRV variability matches unstable Vata (Air) nervous energy.');
-  
-  const f_tempCold = avgTemp !== null && avgTemp < tempBase ? Math.min(1.0, (tempBase - avgTemp) / 1.5) : 0;
-  if (f_tempCold > 0.4) aggravating.push(`Cooler body temp (${avgTemp}°C) triggers cooling Vata/Kapha properties.`);
-  else if (avgTemp !== null) pacifying.push('Stable core temperature balances cooling elements.');
-
-  const f_sleepPoor = totalSleepMinutes > 0 && totalSleepMinutes < 360 ? Math.min(1.0, (360 - totalSleepMinutes) / 120) : (avgSleepScore < 65 ? 0.5 : 0);
-  if (f_sleepPoor > 0.4) aggravating.push('Restless or truncated sleep has excited Vata hyper-sensitivity.');
-  else if (totalSleepMinutes >= 360) pacifying.push('Adequate sleep duration pacifies Vata attributes.');
-
-  const f_stepsErratic = activityRatio > 0.7 && totalSteps > 8000 && totalSteps < 12000 ? 0.6 : 0;
-  if (f_stepsErratic > 0.4) aggravating.push('Erratic, active physical step distribution excites Vata wind elements.');
-
-  const f_tasteVata = tastesProportions.bitter + tastesProportions.pungent + tastesProportions.astringent;
-  if (f_tasteVata > 0.5) aggravating.push('Aggravating dry/light tastes consumed (Bitter, Spicy, or Astringent).');
-  
-  const f_hydrationLow = totalWaterMl > 0 && totalWaterMl < 1500 ? Math.min(1.0, (1500 - totalWaterMl) / 1000) : 0;
-  if (f_hydrationLow > 0.5) aggravating.push('Inadequate water intake (<1500ml) increases Vata dryness.');
-  else if (totalWaterMl >= 2000) pacifying.push('Abundant hydration maintains tissue moisture (pacifying Vata).');
-
-  // Pitta Features
   const f_hrHigh = avgHr !== null && avgHr > hrRestBase + 5 ? Math.min(1.0, (avgHr - (hrRestBase + 5)) / 15.0) : 0;
-  if (f_hrHigh > 0.4) aggravating.push(`Elevated resting heart rate (${avgHr} bpm) triggers hyperactive Pitta (Fire).`);
-  
-  const f_tempHot = avgTemp !== null && avgTemp > tempBase + 0.3 ? Math.min(1.0, (avgTemp - (tempBase + 0.3)) / 1.5) : 0;
-  if (f_tempHot > 0.4) aggravating.push(`Thermal skin temperature rises (${avgTemp}°C) activate heat-seeking Pitta.`);
-
-  const f_stepsHigh = totalSteps > 12000 ? Math.min(1.0, (totalSteps - 12000) / 8000.0) : 0;
-  if (f_stepsHigh > 0.5) aggravating.push('High cardiovascular step counts trigger metabolic Pitta fire.');
-
-  const f_tastePitta = tastesProportions.sour + tastesProportions.salty + tastesProportions.pungent;
-  if (f_tastePitta > 0.5) aggravating.push('Heating tastes logged (Sour, Salty, or Spicy/Pungent).');
-
-  // Kapha Features
   const f_hrLow = avgHr !== null && avgHr < hrRestBase - 5 ? Math.min(1.0, ((hrRestBase - 5) - avgHr) / 15.0) : 0;
-  if (f_hrLow > 0.4) aggravating.push('Bradycardic/slow heart rate triggers stable Kapha (Earth/Water) lethargy.');
 
+  const hrVata = Math.round(f_hrv * WEIGHTS.VATA.hrv * 15 * 10) / 10;
+  const hrPitta = Math.round(f_hrHigh * WEIGHTS.PITTA.hrRestHigh * 15 * 10) / 10;
+  const hrKapha = Math.round(f_hrLow * WEIGHTS.KAPHA.hrRestLow * 15 * 10) / 10;
+
+  let hrExplanation = 'Heart rate values remain within stable limits.';
+  if (hrVata > 1.5) {
+    aggravating.push('High HRV variability represents active Vata wind energy in the nervous system.');
+    hrExplanation = 'Erratic pulse variations stimulate active Vata wind.';
+  }
+  if (hrPitta > 1.5) {
+    aggravating.push('Elevated heart rates raise Pitta fire and metabolic heat.');
+    hrExplanation = 'High resting heart rate triggers heated Pitta element.';
+  }
+  if (hrKapha > 1.5) {
+    aggravating.push('Bradycardic resting pulses match a sluggish, heavy Kapha energy state.');
+    hrExplanation = 'Bradycardic rhythm corresponds to heavy, slow Kapha.';
+  }
+
+  factors.push({
+    name: 'Heart Rate',
+    value: avgHr ? `${avgHr} bpm (HRV: ${Math.round(hrvVal)}ms)` : 'No Feed',
+    impact: { vata: hrVata, pitta: hrPitta, kapha: hrKapha },
+    explanation: hrExplanation
+  });
+
+  // 2. Body Temperature
+  const f_tempCold = avgTemp !== null && avgTemp < tempBase ? Math.min(1.0, (tempBase - avgTemp) / 1.5) : 0;
+  const f_tempHot = avgTemp !== null && avgTemp > tempBase + 0.3 ? Math.min(1.0, (avgTemp - (tempBase + 0.3)) / 1.5) : 0;
+
+  const tempVata = Math.round(f_tempCold * WEIGHTS.VATA.tempCold * 15 * 10) / 10;
+  const tempPitta = Math.round(f_tempHot * WEIGHTS.PITTA.tempHot * 15 * 10) / 10;
+  const tempKapha = Math.round(f_tempCold * WEIGHTS.KAPHA.tempCold * 15 * 10) / 10;
+
+  let tempExplanation = 'Skin temperature is near baseline.';
+  if (tempPitta > 1.5) {
+    aggravating.push(`Elevated body temperature (${avgTemp}°C) triggers active Pitta heat.`);
+    tempExplanation = 'Elevated skin temperature excites Pitta fire.';
+  } else if (tempVata > 1.0) {
+    aggravating.push(`Cool skin temperature (${avgTemp}°C) stimulates cold Vata and Kapha.`);
+    tempExplanation = 'Cooler skin temperature increases cold Vata and Kapha traits.';
+  }
+
+  factors.push({
+    name: 'Temperature',
+    value: avgTemp ? `${avgTemp} °C` : 'No Feed',
+    impact: { vata: tempVata, pitta: tempPitta, kapha: tempKapha },
+    explanation: tempExplanation
+  });
+
+  // 3. Sleep duration & depth
+  const f_sleepPoor = totalSleepMinutes > 0 && totalSleepMinutes < 360 ? Math.min(1.0, (360 - totalSleepMinutes) / 120) : (avgSleepScore < 65 ? 0.5 : 0);
   const f_sleepLong = totalSleepMinutes > 540 ? Math.min(1.0, (totalSleepMinutes - 540) / 120.0) : 0;
-  if (f_sleepLong > 0.4) aggravating.push('Hypersomnia / excessive sleep duration (>9 hrs) matches sluggish Kapha.');
 
+  const sleepVata = Math.round(f_sleepPoor * WEIGHTS.VATA.sleepPoor * 15 * 10) / 10;
+  const sleepPitta = 0;
+  const sleepKapha = Math.round(f_sleepLong * WEIGHTS.KAPHA.sleepLong * 15 * 10) / 10;
+
+  let sleepExplanation = 'Sleep hours are restorative.';
+  if (sleepVata > 1.5) {
+    aggravating.push('Restless or truncated sleep aggravates Vata hyper-sensitivity.');
+    sleepExplanation = 'Insufficient sleep excites nervous Vata properties.';
+  } else if (sleepKapha > 1.5) {
+    aggravating.push('Hypersomnia or sleeping too long (>9 hrs) stimulates Kapha stagnation.');
+    sleepExplanation = 'Excessive sleep duration promotes Kapha lethargy.';
+  } else {
+    pacifying.push('Consistent, restful sleep cycles maintain elemental equilibrium.');
+  }
+
+  factors.push({
+    name: 'Sleep',
+    value: totalSleepMinutes > 0 ? `${(totalSleepMinutes/60).toFixed(1)} hrs (Score: ${Math.round(avgSleepScore)})` : 'No Log',
+    impact: { vata: sleepVata, pitta: sleepPitta, kapha: sleepKapha },
+    explanation: sleepExplanation
+  });
+
+  // 4. Activity & steps
+  const f_stepsErratic = activityRatio > 0.7 && totalSteps > 8000 && totalSteps < 12000 ? 0.6 : 0;
+  const f_stepsHigh = totalSteps > 12000 ? Math.min(1.0, (totalSteps - 12000) / 8000.0) : 0;
   const f_stepsSedentary = totalSteps < 3000 ? Math.min(1.0, (3000 - totalSteps) / 2000.0) : 0;
-  if (f_stepsSedentary > 0.5) aggravating.push('Extremely low step count matches sluggish Kapha immobility.');
-  else if (totalSteps > 6000) pacifying.push('Consistent steps and active circulation pacify Kapha earthiness.');
 
+  const actVata = Math.round(f_stepsErratic * WEIGHTS.VATA.stepsErratic * 15 * 10) / 10;
+  const actPitta = Math.round(f_stepsHigh * WEIGHTS.PITTA.stepsHigh * 15 * 10) / 10;
+  const actKapha = Math.round(f_stepsSedentary * WEIGHTS.KAPHA.stepsSedentary * 15 * 10) / 10;
+
+  let actExplanation = 'Moderate exercise and activity levels achieved.';
+  if (actPitta > 1.5) {
+    aggravating.push('Heavy physical exertion (>12k steps) excites cardiovascular Pitta fire.');
+    actExplanation = 'Excess steps ignite metabolic Pitta heat.';
+  } else if (actVata > 1.0) {
+    aggravating.push('High, erratic movement patterns trigger active Vata elements.');
+    actExplanation = 'Erratic steps excite dry Vata wind.';
+  } else if (actKapha > 1.5) {
+    aggravating.push('Sedentary logs (<3000 steps) match sluggish Kapha accumulation.');
+    actExplanation = 'Sedentary status triggers stagnant Kapha earth.';
+  } else {
+    pacifying.push('Moderate, regular steps keep Kapha moving and blood circulating.');
+  }
+
+  factors.push({
+    name: 'Activity',
+    value: `${totalSteps.toLocaleString()} steps`,
+    impact: { vata: actVata, pitta: actPitta, kapha: actKapha },
+    explanation: actExplanation
+  });
+
+  // 5. Food taste log proportions
+  const f_tasteVata = tastesProportions.bitter + tastesProportions.pungent + tastesProportions.astringent;
+  const f_tastePitta = tastesProportions.sour + tastesProportions.salty + tastesProportions.pungent;
   const f_tasteKapha = tastesProportions.sweet + tastesProportions.sour + tastesProportions.salty;
-  if (f_tasteKapha > 0.5) aggravating.push('Heavy, sweet, or cloying tastes logged contributing to Kapha weight.');
 
+  const foodVata = Math.round(f_tasteVata * WEIGHTS.VATA.tasteBitterPungentAstringent * 15 * 10) / 10;
+  const foodPitta = Math.round(f_tastePitta * WEIGHTS.PITTA.tasteSourSaltyPungent * 15 * 10) / 10;
+  const foodKapha = Math.round(f_tasteKapha * WEIGHTS.KAPHA.tasteSweetSourSalty * 15 * 10) / 10;
+
+  let foodExplanation = 'Balanced tastes consumed.';
+  if (foodVata > 1.0) {
+    aggravating.push('Bitter, spicy, or astringent tastes dry up tissues, increasing Vata.');
+    foodExplanation = 'Drying tastes logged trigger Vata dryness.';
+  }
+  if (foodPitta > 1.0) {
+    aggravating.push('Sour, salty, or spicy food choices excite stomach acidity and Pitta heat.');
+    foodExplanation = 'Sour/spicy properties logged increase Pitta heat.';
+  }
+  if (foodKapha > 1.0) {
+    aggravating.push('Heavy, sweet, or salty foods encourage fluid retention and Kapha density.');
+    foodExplanation = 'Heavy sweet tastes excite Kapha earth.';
+  }
+
+  factors.push({
+    name: 'Food',
+    value: totalTasteLogs > 0 ? `${totalTasteLogs} meals logged` : 'No Meals',
+    impact: { vata: foodVata, pitta: foodPitta, kapha: foodKapha },
+    explanation: foodExplanation
+  });
+
+  // 6. Hydration
+  const f_hydrationLow = totalWaterMl > 0 && totalWaterMl < 1500 ? Math.min(1.0, (1500 - totalWaterMl) / 1000) : 0;
   const f_hydrationOver = totalWaterMl > 3500 ? Math.min(1.0, (totalWaterMl - 3500) / 1500.0) : 0;
-  if (f_hydrationOver > 0.5) aggravating.push('Excessive daily water intake contributes to Kapha water retention.');
+
+  const hydVata = Math.round(f_hydrationLow * WEIGHTS.VATA.hydrationLow * 15 * 10) / 10;
+  const hydPitta = 0;
+  const hydKapha = Math.round(f_hydrationOver * WEIGHTS.KAPHA.hydrationOver * 15 * 10) / 10;
+
+  let hydExplanation = 'Water levels are within balanced bounds.';
+  if (hydVata > 0.5) {
+    aggravating.push('Low hydration intake (<1500ml) encourages dry Vata attributes.');
+    hydExplanation = 'Inadequate hydration raises Vata dryness.';
+  } else if (hydKapha > 0.5) {
+    aggravating.push('Excessive water intake (>3500ml) causes liquid Kapha retention.');
+    hydExplanation = 'Over-hydration may trigger heavy Kapha fluids.';
+  } else {
+    pacifying.push('Consistent water drinking pacifies Vata dryness.');
+  }
+
+  factors.push({
+    name: 'Hydration',
+    value: `${totalWaterMl} ml`,
+    impact: { vata: hydVata, pitta: hydPitta, kapha: hydKapha },
+    explanation: hydExplanation
+  });
+
+  // 7. Psychological Stress
+  const f_stressHigh = stressLevel === 'high' ? 1.0 : stressLevel === 'medium' ? 0.4 : 0.0;
+  
+  const stressVata = Math.round(f_stressHigh * WEIGHTS.VATA.stressHigh * 15 * 10) / 10;
+  const stressPitta = Math.round(f_stressHigh * WEIGHTS.PITTA.stressHigh * 15 * 10) / 10;
+  const stressKapha = 0;
+
+  let stressExplanation = 'Stress index is low and restorative.';
+  if (stressLevel === 'high') {
+    aggravating.push('High psychological stress levels trigger neurological Vata and hot Pitta.');
+    stressExplanation = 'High stress excites nervous Vata and irritable Pitta.';
+  } else if (stressLevel === 'medium') {
+    stressExplanation = 'Moderate mental stress limits recovery rates.';
+  } else {
+    pacifying.push('Calm stress markers pacify hyper-reactive Vata and Pitta.');
+  }
+
+  factors.push({
+    name: 'Stress',
+    value: stressLevel.toUpperCase(),
+    impact: { vata: stressVata, pitta: stressPitta, kapha: stressKapha },
+    explanation: stressExplanation
+  });
 
   if (pacifying.length === 0) pacifying.push('Baseline metabolic balance active.');
   if (aggravating.length === 0) aggravating.push('No aggravating anomalies detected.');
 
-  // -------------------------------------------------------------------------
-  // 5. Weight Calculation & Normalization
-  // -------------------------------------------------------------------------
+  // Calculate final dynamic percentages
+  const deltaVata = hrVata + tempVata + sleepVata + actVata + foodVata + hydVata + stressVata;
+  const deltaPitta = hrPitta + tempPitta + sleepPitta + actPitta + foodPitta + hydPitta + stressPitta;
+  const deltaKapha = hrKapha + tempKapha + sleepKapha + actKapha + foodKapha + hydKapha + stressKapha;
 
-  // Calculate dynamic deltas
-  const deltaVata = (
-    WEIGHTS.VATA.hrv * f_hrv +
-    WEIGHTS.VATA.tempCold * f_tempCold +
-    WEIGHTS.VATA.sleepPoor * f_sleepPoor +
-    WEIGHTS.VATA.stepsErratic * f_stepsErratic +
-    WEIGHTS.VATA.tasteBitterPungentAstringent * f_tasteVata +
-    WEIGHTS.VATA.hydrationLow * f_hydrationLow
-  );
+  const scoreVata = baseline.vata + deltaVata;
+  const scorePitta = baseline.pitta + deltaPitta;
+  const scoreKapha = baseline.kapha + deltaKapha;
 
-  const deltaPitta = (
-    WEIGHTS.PITTA.hrRestHigh * f_hrHigh +
-    WEIGHTS.PITTA.tempHot * f_tempHot +
-    WEIGHTS.PITTA.stepsHigh * f_stepsHigh +
-    WEIGHTS.PITTA.tasteSourSaltyPungent * f_tastePitta
-  );
-
-  const deltaKapha = (
-    WEIGHTS.KAPHA.hrRestLow * f_hrLow +
-    WEIGHTS.KAPHA.tempCold * f_tempCold +
-    WEIGHTS.KAPHA.sleepLong * f_sleepLong +
-    WEIGHTS.KAPHA.stepsSedentary * f_stepsSedentary +
-    WEIGHTS.KAPHA.tasteSweetSourSalty * f_tasteKapha +
-    WEIGHTS.KAPHA.hydrationOver * f_hydrationOver
-  );
-
-  // Compute final scores matching quiz baseline + dynamic deltas
-  const scoreVata = baseline.vata + deltaVata * 15.0; // dynamic swing bounded to 15% range
-  const scorePitta = baseline.pitta + deltaPitta * 15.0;
-  const scoreKapha = baseline.kapha + deltaKapha * 15.0;
-
-  // Softmax normalization
   const totalScore = scoreVata + scorePitta + scoreKapha;
   const pVata = Number(((scoreVata / totalScore) * 100).toFixed(1));
   const pPitta = Number(((scorePitta / totalScore) * 100).toFixed(1));
   const pKapha = Number((100.0 - (pVata + pPitta)).toFixed(1));
 
-  // Run dynamic dosha validation rules
   validateOutputDosha({ vata: pVata, pitta: pPitta, kapha: pKapha });
 
-  // 6. Trend Detection Analyzers
+  // 8. Tomorrow's Predictions
+  // Follow recommendations tomorrow (calming breathing + proper meals + water)
+  const tomorrowVataFollow = Math.round(Math.max(15, pVata - 4));
+  const tomorrowPittaFollow = Math.round(Math.max(15, pPitta - 3));
+  const tomorrowKaphaFollow = Math.round(100 - (tomorrowVataFollow + tomorrowPittaFollow));
+
+  // Ignore recommendations tomorrow (late sleep + spicy food + stress)
+  const tomorrowVataIgnore = Math.round(Math.min(60, pVata + 4));
+  const tomorrowPittaIgnore = Math.round(Math.min(60, pPitta + 3));
+  const tomorrowKaphaIgnore = Math.round(100 - (tomorrowVataIgnore + tomorrowPittaIgnore));
+
+  // Build Diagnostic Reasoning text
+  let reasoning = 'Your bio-elements are in a state of stable homeostatic equilibrium.';
+  const maxPerc = Math.max(pVata, pPitta, pKapha);
+  if (maxPerc === pVata && pVata > 35) {
+    reasoning = 'Active Vata wind energy is currently elevated. This is primarily influenced by lighter sleep records and lower hydration levels logged today.';
+  } else if (maxPerc === pPitta && pPitta > 35) {
+    reasoning = 'Active Pitta fire is currently elevated. This is driven by elevated skin temperatures and a higher resting heart rate baseline.';
+  } else if (maxPerc === pKapha && pKapha > 35) {
+    reasoning = 'Active Kapha earth energy is currently elevated, reflecting sluggish circulation. This is correlated with a highly sedentary day or excessive sleep.';
+  }
+
   const trends = await detectDoshaTrends(userId, { vata: pVata, pitta: pPitta, kapha: pKapha });
 
   const finalState: CalculatedDoshaState = {
@@ -365,13 +480,19 @@ export async function calculateDailyDosha(userId: string, dateStr: string): Prom
     tasteProfile: tastesCounts,
     explanationSummary: {
       aggravating,
-      pacifying
+      pacifying,
+      factors,
+      reasoning,
+      prediction: {
+        tomorrowFollow: { vata: tomorrowVataFollow, pitta: tomorrowPittaFollow, kapha: tomorrowKaphaFollow },
+        tomorrowIgnore: { vata: tomorrowVataIgnore, pitta: tomorrowPittaIgnore, kapha: tomorrowKaphaIgnore }
+      }
     },
     trendAlert: trends
   };
 
-  // 7. Save calculated dynamic states to database
-  const payload: any = {
+  // Upsert to DB
+  const payload = {
     user_id: userId,
     date: dateStr,
     vata_percentage: finalState.vata,
@@ -394,8 +515,7 @@ export async function calculateDailyDosha(userId: string, dateStr: string): Prom
   if (dbError) {
     const errMsg = dbError.message || '';
     if (errMsg.includes('explanation_summary') || errMsg.includes('trend_alert')) {
-      console.warn('[DoshaEngine] Target Supabase instance is missing the new XAI columns. Retrying without them...');
-      // Fallback payload without explanation_summary and trend_alert
+      console.warn('[DoshaEngine] Retrying without new explanation columns...');
       const fallbackPayload = {
         user_id: userId,
         date: dateStr,
@@ -409,28 +529,21 @@ export async function calculateDailyDosha(userId: string, dateStr: string): Prom
         water_intake_ml: finalState.waterIntakeMl,
         taste_profile_summary: finalState.tasteProfile
       };
-
       const { error: fallbackError } = await supabase
         .from('daily_dosha_states')
         .upsert(fallbackPayload, { onConflict: 'user_id,date' });
-
       dbError = fallbackError;
     }
   }
 
   if (dbError) {
-    console.error(`[DoshaEngine] Failed to save calculated dosha for ${dateStr}:`, dbError);
+    console.error(`[DoshaEngine] Save failed for ${dateStr}:`, dbError);
     throw dbError;
   }
-
-  console.log(`[DoshaEngine] Dynamic Dosha calculated for user ${userId} on ${dateStr}: Vata:${finalState.vata}% Pitta:${finalState.pitta}% Kapha:${finalState.kapha}%`);
 
   return finalState;
 }
 
-/**
- * Retrieve dynamic dosha records history for trend charts.
- */
 export async function getDoshaHistory(userId: string, limit: number = 7): Promise<any[]> {
   const { data, error } = await supabase
     .from('daily_dosha_states')
@@ -440,7 +553,7 @@ export async function getDoshaHistory(userId: string, limit: number = 7): Promis
     .limit(limit);
 
   if (error) {
-    console.error('[DoshaEngine] Failed to fetch dosha history:', error);
+    console.error('[DoshaEngine] Fetch history failed:', error);
     return [];
   }
   return data || [];

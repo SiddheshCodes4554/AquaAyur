@@ -7,6 +7,10 @@ import { triggerSync } from './syncManager';
 import { useAuthStore } from '../store/useAuthStore';
 import { supabase } from '../lib/supabase';
 import { validateBiometrics } from '../utils/validation';
+import Constants from 'expo-constants';
+
+const isExpoGo = Constants?.executionEnvironment === 'storeClient';
+
 
 // Service & Characteristic UUIDs matching the BLE specification
 export const SERVICE_UUID = '12345678-1234-1234-1234-123456789abc';
@@ -85,10 +89,16 @@ export function getBleManager(): BleManager | null {
  */
 export async function requestBLEPermissions(): Promise<boolean> {
   console.log('[BLE] requestBLEPermissions called.');
+  if (isExpoGo) {
+    console.log('[BLE] Running in Expo Go. Simulating Bluetooth permission success.');
+    return true;
+  }
+
   if (Platform.OS === 'ios') {
     console.log('[BLE] iOS platform detected, bypassing PermissionsAndroid');
     return true;
   }
+
 
   if (Platform.OS === 'android') {
     console.log('[BLE] Android platform version:', Platform.Version);

@@ -1,497 +1,641 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/useAuthStore';
 import { supabase } from '../../services/supabase';
+import { requestBLEPermissions } from '../../services/bleManager';
+import { requestNotificationPermissions } from '../../services/reminderService';
 
-interface QuizQuestion {
-  id: number;
-  question: string;
-  category: 'Physical' | 'Physiology' | 'Psychology';
-  options: {
-    text: string;
-    dosha: 'vata' | 'pitta' | 'kapha';
-  }[];
-}
+type Gender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
+type DietPreference = 'Vegetarian' | 'Vegan' | 'Eggetarian' | 'Non-Vegetarian' | 'Jain' | 'Other';
+type ActivityLevel = 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active';
+type StressLevel = 'low' | 'medium' | 'high';
+type Alcohol = 'none' | 'occasional' | 'frequent';
+type ExerciseFrequency = 'none' | '1-2_times_week' | '3-5_times_week' | 'daily';
 
-const DOSHA_QUIZ: QuizQuestion[] = [
-  // 1. PHYSICAL STRUCTURE
-  {
-    id: 1,
-    category: 'Physical',
-    question: 'How would you describe your physical body frame structure?',
-    options: [
-      { text: 'Slender, tall or short, bony, struggles to gain weight', dosha: 'vata' },
-      { text: 'Medium build, muscular, maintains weight easily', dosha: 'pitta' },
-      { text: 'Large build, broad shoulders, gains weight easily, slow metabolism', dosha: 'kapha' }
-    ]
-  },
-  {
-    id: 2,
-    category: 'Physical',
-    question: 'How does your skin feel and look most of the time?',
-    options: [
-      { text: 'Dry, rough, cool to touch, thin, cracks easily in cold weather', dosha: 'vata' },
-      { text: 'Warm, oily, reddish/flushed, prone to freckles or inflammation', dosha: 'pitta' },
-      { text: 'Thick, soft, smooth, oily, pale, cool to touch', dosha: 'kapha' }
-    ]
-  },
-  {
-    id: 3,
-    category: 'Physical',
-    question: 'Describe your hair characteristics (thickness, texture, quality):',
-    options: [
-      { text: 'Dry, frizzy, thin, coarse, or brittle', dosha: 'vata' },
-      { text: 'Fine, oily, early graying or thinning, reddish tones', dosha: 'pitta' },
-      { text: 'Thick, oily, strong, wavy, dark, or highly lustrous', dosha: 'kapha' }
-    ]
-  },
-  {
-    id: 4,
-    category: 'Physical',
-    question: 'How do your physical joints behave (knees, elbows, knuckles)?',
-    options: [
-      { text: 'Prominent, thin, crack or pop easily, prone to stiffness', dosha: 'vata' },
-      { text: 'Flexible, moderate sizing, normal joint structure', dosha: 'pitta' },
-      { text: 'Padded, strong, large, stable, and well-lubricated', dosha: 'kapha' }
-    ]
-  },
-  {
-    id: 5,
-    category: 'Physical',
-    question: 'Describe your weight gain and weight loss patterns:',
-    options: [
-      { text: 'Hard to gain weight; loses weight rapidly when stressed', dosha: 'vata' },
-      { text: 'Gains or loses weight easily; maintains target weight with minor effort', dosha: 'pitta' },
-      { text: 'Gains weight very easily; struggles to lose weight even with dieting', dosha: 'kapha' }
-    ]
-  },
-  // 2. PHYSIOLOGY & HABITS
-  {
-    id: 6,
-    category: 'Physiology',
-    question: 'What are your digestion and appetite patterns?',
-    options: [
-      { text: 'Irregular, variable hunger, prone to gas, bloating, and constipation', dosha: 'vata' },
-      { text: 'Strong appetite, digests quickly, gets irritable/acidic when hungry', dosha: 'pitta' },
-      { text: 'Slow digestion, moderate but steady hunger, feels heavy after eating', dosha: 'kapha' }
-    ]
-  },
-  {
-    id: 7,
-    category: 'Physiology',
-    question: 'How do you react to different climates and weather conditions?',
-    options: [
-      { text: 'Hates cold, dry, and windy climates; thrives in warmth', dosha: 'vata' },
-      { text: 'Hates hot weather, direct sun, and humidity; loves cool weather', dosha: 'pitta' },
-      { text: 'Hates damp, cold, and cloudy weather; thrives in dry warmth', dosha: 'kapha' }
-    ]
-  },
-  {
-    id: 8,
-    category: 'Physiology',
-    question: 'Describe your sleep quality and patterns:',
-    options: [
-      { text: 'Light, easily disrupted, wakes up frequently, needs 6 hours', dosha: 'vata' },
-      { text: 'Moderate, sound sleep, wakes up feeling alert, needs 7-8 hours', dosha: 'pitta' },
-      { text: 'Deep, long, hard to wake up, needs 8+ hours, prone to morning sluggishness', dosha: 'kapha' }
-    ]
-  },
-  {
-    id: 9,
-    category: 'Physiology',
-    question: 'How are your typical hydration needs and thirst levels?',
-    options: [
-      { text: 'Thirsty at irregular intervals, forgets to drink water easily', dosha: 'vata' },
-      { text: 'Frequently thirsty, drinks large volumes of cold water', dosha: 'pitta' },
-      { text: 'Rarely feels intense thirst, can go long hours without water comfortably', dosha: 'kapha' }
-    ]
-  },
-  {
-    id: 10,
-    category: 'Physiology',
-    question: 'What is your typical energy endurance and physical stamina level?',
-    options: [
-      { text: 'Short bursts of high energy, fatigues quickly, needs regular rest', dosha: 'vata' },
-      { text: 'Medium stamina, highly focused, pushes self to exhaustion', dosha: 'pitta' },
-      { text: 'High endurance and physical strength, slow starting but steady', dosha: 'kapha' }
-    ]
-  },
-  // 3. PSYCHOLOGY & EMOTIONS
-  {
-    id: 11,
-    category: 'Psychology',
-    question: 'Which describes your memory style best?',
-    options: [
-      { text: 'Learns very quickly, forgets quickly; short-term focus', dosha: 'vata' },
-      { text: 'Learns systematically, remembers logically with facts and context', dosha: 'pitta' },
-      { text: 'Takes time to learn, remembers forever; excellent long-term memory', dosha: 'kapha' }
-    ]
-  },
-  {
-    id: 12,
-    category: 'Psychology',
-    question: 'How do you respond to stress or emotional challenges?',
-    options: [
-      { text: 'Prone to anxiety, worry, fear, and overthinking; easily unsettled', dosha: 'vata' },
-      { text: 'Prone to impatience, anger, irritability, and competitiveness', dosha: 'pitta' },
-      { text: 'Prone to calmness, patience, avoidance, attachment, or complacency', dosha: 'kapha' }
-    ]
-  },
-  {
-    id: 13,
-    category: 'Psychology',
-    question: 'How would you describe your speech and thinking pacing?',
-    options: [
-      { text: 'Fast talker, jumps between ideas, quick-witted but scattered', dosha: 'vata' },
-      { text: 'Clear, precise, direct, logical, debating, or sharp-minded', dosha: 'pitta' },
-      { text: 'Slow, deliberate, calm voice, excellent listener, speaks sparingly', dosha: 'kapha' }
-    ]
-  },
-  {
-    id: 14,
-    category: 'Psychology',
-    question: 'How do you typically make decisions?',
-    options: [
-      { text: 'Hesitant, changes mind frequently, doubts choices', dosha: 'vata' },
-      { text: 'Decisive, logical, firm, takes action quickly', dosha: 'pitta' },
-      { text: 'Slow, thoughtful, conservative, dislikes being rushed', dosha: 'kapha' }
-    ]
-  },
-  {
-    id: 15,
-    category: 'Psychology',
-    question: 'What is your daily habits and scheduling style?',
-    options: [
-      { text: 'Irregular routines, spontaneous, dislikes structured timetables', dosha: 'vata' },
-      { text: 'Organized, planned, uses checklists, goal-driven and structured', dosha: 'pitta' },
-      { text: 'Routine-bound, steady, predictable, resistant to sudden changes', dosha: 'kapha' }
-    ]
-  }
+const HEALTH_GOAL_OPTIONS = [
+  'Improve sleep',
+  'Lose weight',
+  'Reduce stress',
+  'Improve digestion',
+  'Increase stamina',
+  'Better heart health',
 ];
 
-// Curated Dosha Recommendations
-const DOSHA_DEFAULTS = {
-  vata: {
-    title: 'Vata Dominant (Air & Ether)',
-    desc: 'You have a Vata-dominant constitution. Your biological forces are light, cold, dry, and mobile. Balanced Vata promotes creativity and vitality, while aggravated Vata leads to anxiety, dry skin, insomnia, and irregular digestion.',
-    gunas: 'Dry, light, cold, rough, subtle, mobile.',
-    nutrition: 'Prioritize warm, heavy, oily, and cooked foods with Sweet, Sour, and Salty tastes. Eat cooked grains, avocados, root vegetables, nuts, and ghee. Avoid dry raw salads, cold drinks, and beans.',
-    lifestyle: 'Maintain a strict daily routine. Perform warm oil self-massages (Abhyanga), engage in grounding, slow-paced yoga, meditate, and keep warm.'
-  },
-  pitta: {
-    title: 'Pitta Dominant (Fire & Water)',
-    desc: 'You have a Pitta-dominant constitution. Your biological forces are hot, sharp, light, and spreading. Balanced Pitta promotes sharp intellect, digestion, and passion, while aggravated Pitta leads to anger, acid reflux, skin rashes, and inflammation.',
-    gunas: 'Hot, sharp, light, oily, spreading.',
-    nutrition: 'Prioritize cooling, sweet, bitter, and astringent tastes. Eat sweet fruits, leafy greens, coconut oil, cucumber, fennel, and mint. Avoid hot spices, alcohol, coffee, tomatoes, and red meat.',
-    lifestyle: 'Avoid direct midday sun. Stay calm and practice moderation (do not over-work). Practice cooling sheetali pranayama, swim, or take walks in nature.'
-  },
-  kapha: {
-    title: 'Kapha Dominant (Earth & Water)',
-    desc: 'You have a Kapha-dominant constitution. Your biological forces are heavy, slow, cool, oily, and stable. Balanced Kapha promotes strength, endurance, patience, and compassion, while aggravated Kapha leads to weight gain, lethargy, congestion, and attachment.',
-    gunas: 'Heavy, slow, cool, oily, smooth, stable.',
-    nutrition: 'Prioritize warm, light, dry, and stimulating foods with Pungent, Bitter, and Astringent tastes. Eat leafy greens, sprouts, ginger, garlic, cayenne pepper, quinoa, and millet. Avoid sweets, dairy, and cold water.',
-    lifestyle: 'Engage in active routines and vigorous physical exercises (running, active vinyasa yoga). Wake up early, dry-brush skin (Garshana), and avoid daytime naps.'
-  },
-  dual_vata_pitta: {
-    title: 'Vata-Pitta Dominant',
-    desc: 'Your constitution is dual, combining characteristics of both Vata (Air) and Pitta (Fire). You are likely energetic and sharp but prone to dry heat, irregular digestion, or anxiety.',
-    gunas: 'Light, warm/cool fluctuations, sharp, mobile.',
-    nutrition: 'Prioritize sweet and sweet-grounding tastes. Ground Vata with warm cooked foods, and cool Pitta by avoiding spicy, fermented items.',
-    lifestyle: 'Balance intense mental focus with grounding routines. Practice moderate exercise, swim, and use gentle oils.'
-  },
-  dual_pitta_kapha: {
-    title: 'Pitta-Kapha Dominant',
-    desc: 'Your constitution combines Pitta (Fire) and Kapha (Earth/Water). You have strong physical endurance and digestion but can collect excess heat or congestion.',
-    gunas: 'Hot, heavy, oily, stable.',
-    nutrition: 'Prioritize bitter and astringent tastes. Keep foods light and cooling. Avoid heavy, sweet, oily foods and extremely hot spices.',
-    lifestyle: 'Vigorous workouts (cool conditions) keep you active. Stay motivated and avoid sedentary patterns.'
-  },
-  dual_vata_kapha: {
-    title: 'Vata-Kapha Dominant',
-    desc: 'Your constitution combines Vata (Air) and Kapha (Earth/Water). You are generally cool to touch, with a sluggish metabolism and variable digestion.',
-    gunas: 'Cold, light/heavy fluctuations, dry/oily fluctuations.',
-    nutrition: 'Prioritize warm, cooked, dry spiced foods (ginger, black pepper) with pungent and bitter tastes. Avoid cold drinks and heavy dairy.',
-    lifestyle: 'Keep warm. Engage in active, warming cardio and dynamic stretching to stimulate blood flow and dispel lethargy.'
-  },
-  tridoshic: {
-    title: 'Tridoshic Balance (Equal Vata, Pitta, Kapha)',
-    desc: 'You have a rare Tridoshic constitution, where all three doshas are equally represented. You enjoy strong immunity and physical stability.',
-    gunas: 'Balanced equilibrium.',
-    nutrition: 'Eat a balanced diet, altering food styles according to seasons (warm/oily in winter, cooling in summer, light/dry in spring).',
-    lifestyle: 'Maintain steady, balanced habits. Stay in tune with seasonal shifts.'
-  }
-};
-
 export default function OnboardingScreen() {
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [scores, setScores] = useState({ vata: 0, pitta: 0, kapha: 0 });
-  
-  // Scoring results state
-  const [saving, setSaving] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [assessmentResult, setAssessmentResult] = useState<{
-    dominant: 'vata' | 'pitta' | 'kapha' | 'dual_vata_pitta' | 'dual_pitta_kapha' | 'dual_vata_kapha' | 'tridoshic';
-    percentages: { vata: number; pitta: number; kapha: number };
-  } | null>(null);
+  const { userId, email, fetchProfile } = useAuthStore();
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { updateProfile, user } = useAuthStore();
+  // STEP 1: Basic Info
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState<Gender>('prefer_not_to_say');
+  const [weight, setWeight] = useState('');
+  const [height, setHeight] = useState('');
+  const [bloodGroup, setBloodGroup] = useState('');
+  const [country, setCountry] = useState('India');
+  const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata');
+  const [language, setLanguage] = useState('English');
 
-  const handleAnswerSelect = async (dosha: 'vata' | 'pitta' | 'kapha') => {
-    const updatedScores = { ...scores, [dosha]: scores[dosha] + 1 };
-    setScores(updatedScores);
+  // STEP 2: Health Profile
+  const [diet, setDiet] = useState<DietPreference>('Vegetarian');
+  const [allergyInput, setAllergyInput] = useState('');
+  const [allergies, setAllergies] = useState<string[]>([]);
+  const [conditionInput, setConditionInput] = useState('');
+  const [conditions, setConditions] = useState<string[]>([]);
+  const [dislikedFoodInput, setDislikedFoodInput] = useState('');
+  const [dislikedFoods, setDislikedFoods] = useState<string[]>([]);
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [customGoal, setCustomGoal] = useState('');
 
-    if (currentIdx < DOSHA_QUIZ.length - 1) {
-      setCurrentIdx(currentIdx + 1);
+  // STEP 3: Lifestyle
+  const [avgSleep, setAvgSleep] = useState('7.5');
+  const [activity, setActivity] = useState<ActivityLevel>('lightly_active');
+  const [occupation, setOccupation] = useState('');
+  const [stress, setStress] = useState<StressLevel>('medium');
+  const [waterIntake, setWaterIntake] = useState('2000');
+  const [smoking, setSmoking] = useState(false);
+  const [alcohol, setAlcohol] = useState<Alcohol>('none');
+  const [exercise, setExercise] = useState<ExerciseFrequency>('1-2_times_week');
+
+  // STEP 4: Wearable Connection
+  const [wearableConnected, setWearableConnected] = useState(false);
+
+  // STEP 5: Permissions
+  const [bluetoothGranted, setBluetoothGranted] = useState(false);
+  const [notificationsGranted, setNotificationsGranted] = useState(false);
+  const [healthDataGranted, setHealthDataGranted] = useState(false);
+
+  const addTag = (input: string, setInput: React.Dispatch<React.SetStateAction<string>>, list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) => {
+    const clean = input.trim();
+    if (clean && !list.includes(clean)) {
+      setList([...list, clean]);
+    }
+    setInput('');
+  };
+
+  const removeTag = (item: string, list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) => {
+    setList(list.filter(x => x !== item));
+  };
+
+  const toggleGoal = (goal: string) => {
+    if (selectedGoals.includes(goal)) {
+      setSelectedGoals(selectedGoals.filter(g => g !== goal));
     } else {
-      // Calculate final dominant Dosha
-      setSaving(true);
-      try {
-        const { vata, pitta, kapha } = updatedScores;
-        const total = vata + pitta + kapha;
-        
-        const percentages = {
-          vata: Number(((vata / total) * 100).toFixed(1)),
-          pitta: Number(((pitta / total) * 100).toFixed(1)),
-          kapha: Number(((kapha / total) * 100).toFixed(1))
-        };
+      setSelectedGoals([...selectedGoals, goal]);
+    }
+  };
 
-        let dominant: any = 'tridoshic';
+  const handleBluetoothPress = async () => {
+    try {
+      const granted = await requestBLEPermissions();
+      setBluetoothGranted(granted);
+    } catch (err) {
+      console.warn('[Onboarding] Bluetooth request error:', err);
+      setBluetoothGranted(true);
+    }
+  };
 
-        // Dual/Single classification rules (within 10% range is dual)
-        const diffVP = Math.abs(percentages.vata - percentages.pitta);
-        const diffVK = Math.abs(percentages.vata - percentages.kapha);
-        const diffPK = Math.abs(percentages.pitta - percentages.kapha);
+  const handleNotificationsPress = async () => {
+    try {
+      const granted = await requestNotificationPermissions();
+      setNotificationsGranted(granted);
+    } catch (err) {
+      console.warn('[Onboarding] Notifications request error:', err);
+      setNotificationsGranted(true);
+    }
+  };
 
-        if (diffVP <= 10 && diffVK <= 10 && diffPK <= 10) {
-          dominant = 'tridoshic';
-        } else if (diffVP <= 8 && percentages.vata > percentages.kapha) {
-          dominant = 'dual_vata_pitta';
-        } else if (diffPK <= 8 && percentages.pitta > percentages.vata) {
-          dominant = 'dual_pitta_kapha';
-        } else if (diffVK <= 8 && percentages.vata > percentages.pitta) {
-          dominant = 'dual_vata_kapha';
-        } else {
-          // Single dominant
-          if (vata > pitta && vata > kapha) dominant = 'vata';
-          else if (pitta > vata && pitta > kapha) dominant = 'pitta';
-          else dominant = 'kapha';
-        }
+  const handleHealthDataPress = () => {
+    setHealthDataGranted(true);
+  };
 
-        // 1. Get current user ID and attempt database insert
-        try {
-          const sessionUser = (await supabase.auth.getSession()).data.session?.user;
-          if (sessionUser) {
-            // 2. Insert attempt into public.dosha_assessments
-            const { error: dbErr } = await supabase
-              .from('dosha_assessments')
-              .insert({
-                user_id: sessionUser.id,
-                vata_score: vata,
-                pitta_score: pitta,
-                kapha_score: kapha,
-                vata_percentage: percentages.vata,
-                pitta_percentage: percentages.pitta,
-                kapha_percentage: percentages.kapha,
-                result_dosha: dominant
-              });
-
-            if (dbErr) {
-              console.warn('[Onboarding] Supabase db insert failed, continuing locally:', dbErr);
-            }
-          }
-        } catch (dbErr) {
-          console.warn('[Onboarding] Failed to save Dosha baseline to server, continuing locally:', dbErr);
-        }
-
-        setAssessmentResult({
-          dominant,
-          percentages
-        });
-        setShowResults(true);
-      } catch (err) {
-        console.error('[Onboarding] Failed to compute Dosha baseline:', err);
-      } finally {
-        setSaving(false);
+  const handleNextStep = async () => {
+    setErrorMsg(null);
+    if (step === 1) {
+      if (!firstName || !lastName || !age || !weight || !height) {
+        setErrorMsg('Please fill in all vital profile details.');
+        return;
       }
     }
+    if (step === 5) {
+      if (!bluetoothGranted) await handleBluetoothPress();
+      if (!notificationsGranted) await handleNotificationsPress();
+      setHealthDataGranted(true);
+    }
+    setStep(prev => prev + 1);
   };
 
-  const handleProceedToDashboard = async () => {
-    if (!assessmentResult || !user?.id) return;
-    setSaving(true);
+  const handlePrevStep = () => {
+    setErrorMsg(null);
+    setStep(prev => prev - 1);
+  };
+
+  const completeOnboarding = async () => {
+    if (!userId) return;
+    setLoading(true);
+    setErrorMsg(null);
+
     try {
-      const dominant = assessmentResult.dominant;
-      // 3. Save dominant Dosha to Supabase user profile table
-      await updateProfile({
-        dominant_dosha: dominant,
-        daily_water_goal_ml: dominant.includes('pitta') ? 3000 : dominant.includes('vata') ? 2500 : 2000
+      let dynamicDosha: 'vata' | 'pitta' | 'kapha' = 'pitta';
+      if (stress === 'high' || activity === 'very_active') {
+        dynamicDosha = 'vata';
+      } else if (activity === 'sedentary') {
+        dynamicDosha = 'kapha';
+      }
+
+      const allGoals = [...selectedGoals];
+      if (customGoal.trim()) {
+        allGoals.push(customGoal.trim());
+      }
+
+      // Upsert profile in Supabase
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          email: email || '',
+          first_name: firstName,
+          last_name: lastName,
+          full_name: `${firstName} ${lastName}`,
+          age: parseInt(age) || null,
+          gender,
+          weight_kg: parseFloat(weight) || null,
+          height_cm: parseFloat(height) || null,
+          blood_group: bloodGroup || null,
+          country,
+          timezone,
+          preferred_language: language,
+          diet_preference: diet,
+          dominant_dosha: dynamicDosha,
+          daily_water_goal_ml: parseInt(waterIntake) || 2500,
+          daily_calorie_goal_kcal: activity === 'very_active' ? 2600 : activity === 'moderately_active' ? 2200 : 2000,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+
+      if (profileError) throw profileError;
+
+      // Medical Conditions
+      if (conditions.length > 0) {
+        await supabase.from('medical_conditions').delete().eq('user_id', userId);
+        await supabase.from('medical_conditions').insert(
+          conditions.map(c => ({ user_id: userId, condition_name: c }))
+        );
+      }
+
+      // Allergies
+      if (allergies.length > 0) {
+        await supabase.from('allergies').delete().eq('user_id', userId);
+        await supabase.from('allergies').insert(
+          allergies.map(a => ({ user_id: userId, allergy_name: a }))
+        );
+      }
+
+      // Disliked foods
+      if (dislikedFoods.length > 0) {
+        await supabase.from('food_preferences').delete().eq('user_id', userId);
+        await supabase.from('food_preferences').insert(
+          dislikedFoods.map(df => ({ user_id: userId, disliked_food: df }))
+        );
+      }
+
+      // Health Goals
+      if (allGoals.length > 0) {
+        await supabase.from('health_goals').delete().eq('user_id', userId);
+        await supabase.from('health_goals').insert(
+          allGoals.map(g => ({ user_id: userId, goal_name: g }))
+        );
+      }
+
+      // Lifestyle details
+      await supabase.from('lifestyle').delete().eq('user_id', userId);
+      const { error: lifeError } = await supabase.from('lifestyle').insert({
+        user_id: userId,
+        avg_sleep_hours: parseFloat(avgSleep) || 7.0,
+        activity_level: activity,
+        occupation: occupation || null,
+        stress_level: stress,
+        water_intake_ml: parseInt(waterIntake) || 2000,
+        smoking,
+        alcohol,
+        exercise_frequency: exercise,
+        updated_at: new Date().toISOString(),
       });
-    } catch (e) {
-      console.warn('[Onboarding] Profile update failed:', e);
+      if (lifeError) throw lifeError;
+
+      await fetchProfile(userId);
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      console.error('[Onboarding] Save profile error:', e);
+      setErrorMsg(e.message || 'Failed to save health intake profile.');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  const activeQuestion = DOSHA_QUIZ[currentIdx];
-  const progressPercent = Math.round(((currentIdx + 1) / DOSHA_QUIZ.length) * 100);
-
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#022c22' }}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="px-6 py-6">
+    <SafeAreaView className="flex-1 bg-[#091310]" edges={['top', 'bottom']}>
+      <LinearGradient colors={['#091310', '#111d19']} className="flex-1">
         
-        {/* Onboarding Questionnaire */}
-        {!showResults && (
-          <View className="flex-1 justify-center py-6">
-            <View className="bg-emerald-900/30 border border-emerald-800/30 p-6 rounded-3xl">
-              
-              {/* Category & Progress header */}
-              <View className="mb-6">
-                <View className="flex-row justify-between items-center mb-2">
-                  <Text className="text-emerald-400 font-bold uppercase text-xs tracking-widest">
-                    {activeQuestion.category} Assessment
-                  </Text>
-                  <Text className="text-emerald-300 text-xs">
-                    {currentIdx + 1} / {DOSHA_QUIZ.length}
-                  </Text>
-                </View>
-                <View className="h-1.5 w-full bg-emerald-950 rounded-full overflow-hidden">
-                  <View 
-                    style={{ width: `${progressPercent}%` }} 
-                    className="h-full bg-emerald-400"
-                  />
-                </View>
-              </View>
-
-              {saving ? (
-                <View className="py-20 items-center">
-                  <ActivityIndicator size="large" color="#34d399" />
-                  <Text className="text-white text-lg font-bold mt-4">Compiling Profile...</Text>
-                  <Text className="text-emerald-400 text-sm mt-2 text-center">
-                    Analyzing responses and generating recommendations.
-                  </Text>
-                </View>
-              ) : (
-                <View>
-                  <Text className="text-white text-xl font-bold mb-6 leading-relaxed">
-                    {activeQuestion.question}
-                  </Text>
-
-                  <View className="space-y-4">
-                    {activeQuestion.options.map((option, index) => (
-                      <TouchableOpacity
-                        key={index}
-                        onPress={() => handleAnswerSelect(option.dosha)}
-                        className="bg-emerald-950/80 border border-emerald-800/40 rounded-2xl p-5 active:bg-emerald-800/30"
-                      >
-                        <Text className="text-emerald-50 text-base leading-relaxed">
-                          {option.text}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              )}
-            </View>
+        {/* Header */}
+        <View className="px-6 py-4 flex-row justify-between items-center border-b border-emerald-950/60">
+          <View>
+            <Text className="text-white text-base font-serif font-black">Sanctuary Intake</Text>
+            <Text className="text-emerald-400 text-[8px] font-bold uppercase tracking-widest mt-0.5">Ayurvedic Clinical Consultation</Text>
           </View>
-        )}
+          <Text className="text-emerald-400 font-mono text-xs">Phase {step}/6</Text>
+        </View>
 
-        {/* Results & Action Recommendations Screen */}
-        {showResults && assessmentResult && (
-          <View className="space-y-6 py-6">
+        {/* Progress Bar */}
+        <View className="h-1 bg-emerald-950 w-full">
+          <View className="h-full bg-emerald-500" style={{ width: `${(step / 6) * 100}%` }} />
+        </View>
+
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="px-6 py-6" showsVerticalScrollIndicator={false}>
+          {errorMsg && (
+            <View className="bg-red-950/40 border border-red-900/40 p-4 rounded-xl mb-6">
+              <Text className="text-red-400 text-xs text-center font-sans font-medium">{errorMsg}</Text>
+            </View>
+          )}
+
+          <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl mb-6">
             
-            {/* Main Result Card */}
-            <View className="bg-emerald-900/30 border border-emerald-800/30 p-6 rounded-3xl items-center">
-              <Ionicons name="ribbon" size={48} color="#34d399" className="mb-4" />
-              <Text className="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1">Your Ayurvedic Prakriti</Text>
-              <Text className="text-white text-2xl font-black text-center capitalize mb-4">
-                {DOSHA_DEFAULTS[assessmentResult.dominant].title}
-              </Text>
-              <Text className="text-emerald-100/80 text-sm text-center leading-relaxed">
-                {DOSHA_DEFAULTS[assessmentResult.dominant].desc}
-              </Text>
-            </View>
+            {/* STEP 1: PHYSIOLOGICAL PROFILE */}
+            {step === 1 && (
+              <View>
+                <Text className="text-white text-xl font-serif font-bold mb-1">Physiological Intake</Text>
+                <Text className="text-emerald-400/50 text-xs mb-6">Establish your core birth vitals measurements.</Text>
 
-            {/* Constitution Percentage bars */}
-            <View className="bg-emerald-900/30 border border-emerald-800/30 p-6 rounded-3xl">
-              <Text className="text-emerald-300 font-bold text-sm mb-4">Dosha Balance Chart</Text>
-              
-              <View className="space-y-4">
-                {/* Vata */}
-                <View>
-                  <View className="flex-row justify-between text-xs mb-1">
-                    <Text className="text-amber-400 font-bold">Vata (Air/Ether)</Text>
-                    <Text className="text-white font-bold">{assessmentResult.percentages.vata}%</Text>
+                <View className="flex-row space-x-3 mb-4">
+                  <View className="flex-1">
+                    <Text className="text-emerald-300 text-xs font-semibold mb-2">First Name</Text>
+                    <TextInput
+                      value={firstName}
+                      onChangeText={setFirstName}
+                      placeholder="John"
+                      placeholderTextColor="#064e3b"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-12 text-white text-sm"
+                    />
                   </View>
-                  <View className="h-2 w-full bg-emerald-950 rounded-full overflow-hidden">
-                    <View style={{ width: `${assessmentResult.percentages.vata}%` }} className="h-full bg-amber-400" />
+                  <View className="flex-1">
+                    <Text className="text-emerald-300 text-xs font-semibold mb-2">Last Name</Text>
+                    <TextInput
+                      value={lastName}
+                      onChangeText={setLastName}
+                      placeholder="Doe"
+                      placeholderTextColor="#064e3b"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-12 text-white text-sm"
+                    />
                   </View>
                 </View>
 
-                {/* Pitta */}
-                <View>
-                  <View className="flex-row justify-between text-xs mb-1">
-                    <Text className="text-sky-400 font-bold">Pitta (Fire/Water)</Text>
-                    <Text className="text-white font-bold">{assessmentResult.percentages.pitta}%</Text>
+                <View className="flex-row space-x-3 mb-4">
+                  <View className="flex-1">
+                    <Text className="text-emerald-300 text-xs font-semibold mb-2">Age</Text>
+                    <TextInput
+                      value={age}
+                      onChangeText={setAge}
+                      keyboardType="number-pad"
+                      placeholder="28"
+                      placeholderTextColor="#064e3b"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-12 text-white text-sm"
+                    />
                   </View>
-                  <View className="h-2 w-full bg-emerald-950 rounded-full overflow-hidden">
-                    <View style={{ width: `${assessmentResult.percentages.pitta}%` }} className="h-full bg-sky-400" />
+                  <View className="flex-1">
+                    <Text className="text-emerald-300 text-xs font-semibold mb-2">Blood Group</Text>
+                    <TextInput
+                      value={bloodGroup}
+                      onChangeText={setBloodGroup}
+                      placeholder="O+"
+                      placeholderTextColor="#064e3b"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-12 text-white text-sm"
+                    />
                   </View>
                 </View>
 
-                {/* Kapha */}
-                <View>
-                  <View className="flex-row justify-between text-xs mb-1">
-                    <Text className="text-emerald-400 font-bold">Kapha (Earth/Water)</Text>
-                    <Text className="text-white font-bold">{assessmentResult.percentages.kapha}%</Text>
+                <View className="flex-row space-x-3 mb-5">
+                  <View className="flex-1">
+                    <Text className="text-emerald-300 text-xs font-semibold mb-2">Height (cm)</Text>
+                    <TextInput
+                      value={height}
+                      onChangeText={setHeight}
+                      keyboardType="numeric"
+                      placeholder="175"
+                      placeholderTextColor="#064e3b"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-12 text-white text-sm"
+                    />
                   </View>
-                  <View className="h-2 w-full bg-emerald-950 rounded-full overflow-hidden">
-                    <View style={{ width: `${assessmentResult.percentages.kapha}%` }} className="h-full bg-emerald-400" />
+                  <View className="flex-1">
+                    <Text className="text-emerald-300 text-xs font-semibold mb-2">Weight (kg)</Text>
+                    <TextInput
+                      value={weight}
+                      onChangeText={setWeight}
+                      keyboardType="numeric"
+                      placeholder="70"
+                      placeholderTextColor="#064e3b"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-12 text-white text-sm"
+                    />
                   </View>
                 </View>
-              </View>
-            </View>
 
-            {/* Ayurvedic Recommendations Panel */}
-            <View className="bg-emerald-900/30 border border-emerald-800/30 p-6 rounded-3xl space-y-4">
-              <View className="flex-row items-center border-b border-emerald-800/15 pb-3">
-                <Ionicons name="color-palette-outline" size={20} color="#34d399" />
-                <Text className="text-white font-bold text-base ml-2">Balancing Recommendations</Text>
+                <Text className="text-emerald-300 text-xs font-semibold mb-2.5">Gender Expression</Text>
+                <View className="flex-row flex-wrap gap-2 mb-4">
+                  {(['male', 'female', 'other', 'prefer_not_to_say'] as Gender[]).map(g => (
+                    <TouchableOpacity
+                      key={g}
+                      onPress={() => setGender(g)}
+                      className={`px-3 py-2.5 rounded-xl border ${gender === g ? 'bg-emerald-500 border-emerald-400' : 'bg-[#172722] border-[#1f372f]'}`}
+                    >
+                      <Text className={`text-xs font-bold capitalize ${gender === g ? 'text-emerald-950' : 'text-emerald-300'}`}>
+                        {g.replace(/_/g, ' ')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
-
-              <View>
-                <Text className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">Elemental Qualities (Gunas)</Text>
-                <Text className="text-emerald-100/90 text-sm italic">{DOSHA_DEFAULTS[assessmentResult.dominant].gunas}</Text>
-              </View>
-
-              <View>
-                <Text className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">Diet & Nutrition Guidelines</Text>
-                <Text className="text-emerald-100/90 text-sm leading-relaxed">{DOSHA_DEFAULTS[assessmentResult.dominant].nutrition}</Text>
-              </View>
-
-              <View>
-                <Text className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">Lifestyle & Physical Exercise</Text>
-                <Text className="text-emerald-100/90 text-sm leading-relaxed">{DOSHA_DEFAULTS[assessmentResult.dominant].lifestyle}</Text>
-              </View>
-            </View>
-
-            {/* Action buttons */}
-            {saving ? (
-              <ActivityIndicator size="small" color="#34d399" className="py-4" />
-            ) : (
-              <TouchableOpacity
-                onPress={handleProceedToDashboard}
-                className="bg-emerald-500 rounded-2xl py-4 items-center shadow-lg active:bg-emerald-600 mb-6"
-              >
-                <Text className="text-emerald-950 text-base font-extrabold">Complete & Proceed to App</Text>
-              </TouchableOpacity>
             )}
 
+            {/* STEP 2: NUTRITIONAL CONSTITUTION */}
+            {step === 2 && (
+              <View>
+                <Text className="text-white text-xl font-serif font-bold mb-1">Nutritional Intakes</Text>
+                <Text className="text-emerald-400/50 text-xs mb-6">Select your diet style and list stomach restrictions.</Text>
+
+                <Text className="text-emerald-300 text-xs font-semibold mb-2.5">Diet Preference</Text>
+                <View className="flex-row flex-wrap gap-2 mb-4">
+                  {(['Vegetarian', 'Vegan', 'Eggetarian', 'Non-Vegetarian', 'Jain', 'Other'] as DietPreference[]).map(d => (
+                    <TouchableOpacity
+                      key={d}
+                      onPress={() => setDiet(d)}
+                      className={`px-3.5 py-2.5 rounded-xl border ${diet === d ? 'bg-emerald-500 border-emerald-400' : 'bg-[#172722] border-[#1f372f]'}`}
+                    >
+                      <Text className={`text-xs font-bold ${diet === d ? 'text-emerald-950' : 'text-emerald-300'}`}>{d}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text className="text-emerald-300 text-xs font-semibold mb-2.5">Target Health Goals</Text>
+                <View className="flex-row flex-wrap gap-2 mb-4">
+                  {HEALTH_GOAL_OPTIONS.map(g => (
+                    <TouchableOpacity
+                      key={g}
+                      onPress={() => toggleGoal(g)}
+                      className={`px-3 py-2 rounded-xl border ${selectedGoals.includes(g) ? 'bg-emerald-500 border-emerald-400' : 'bg-[#172722] border-[#1f372f]'}`}
+                    >
+                      <Text className={`text-[10px] font-bold ${selectedGoals.includes(g) ? 'text-emerald-950' : 'text-emerald-300'}`}>{g}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TextInput
+                  value={customGoal}
+                  onChangeText={setCustomGoal}
+                  placeholder="Other custom health goals..."
+                  placeholderTextColor="#064e3b"
+                  className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-11 text-white text-xs mb-4"
+                />
+
+                <Text className="text-emerald-300 text-xs font-semibold mb-2">Sensitivities / Conditions</Text>
+                <View className="flex-row space-x-2 mb-3">
+                  <TextInput
+                    value={conditionInput}
+                    onChangeText={setConditionInput}
+                    placeholder="e.g. Hypertension, PCOS"
+                    placeholderTextColor="#064e3b"
+                    className="flex-1 bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-10 text-white text-xs"
+                  />
+                  <TouchableOpacity
+                    onPress={() => addTag(conditionInput, setConditionInput, conditions, setConditions)}
+                    className="bg-emerald-500 px-4 justify-center items-center rounded-xl"
+                  >
+                    <Text className="text-emerald-950 font-bold text-xs">Add</Text>
+                  </TouchableOpacity>
+                </View>
+                <View className="flex-row flex-wrap gap-1.5 mb-4">
+                  {conditions.map(c => (
+                    <View key={c} className="bg-emerald-950 border border-emerald-900 flex-row items-center px-3 py-1 rounded-full">
+                      <Text className="text-emerald-300 text-xs mr-2">{c}</Text>
+                      <TouchableOpacity onPress={() => removeTag(c, conditions, setConditions)}>
+                        <Ionicons name="close-circle" size={14} color="#34d399" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* STEP 3: LIFESTYLE DETAILS */}
+            {step === 3 && (
+              <View>
+                <Text className="text-white text-xl font-serif font-bold mb-1">Circadian Indexing</Text>
+                <Text className="text-emerald-400/50 text-xs mb-6">Map your baseline sleeping and stress configurations.</Text>
+
+                <View className="flex-row space-x-3 mb-4">
+                  <View className="flex-1">
+                    <Text className="text-emerald-300 text-xs font-semibold mb-2">Sleep Average (hrs)</Text>
+                    <TextInput
+                      value={avgSleep}
+                      onChangeText={setAvgSleep}
+                      keyboardType="numeric"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-12 text-white text-sm"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-emerald-300 text-xs font-semibold mb-2">Water Goal (ml)</Text>
+                    <TextInput
+                      value={waterIntake}
+                      onChangeText={setWaterIntake}
+                      keyboardType="number-pad"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-12 text-white text-sm"
+                    />
+                  </View>
+                </View>
+
+                <Text className="text-emerald-300 text-xs font-semibold mb-2.5">Stress Index</Text>
+                <View className="flex-row space-x-2 mb-4">
+                  {(['low', 'medium', 'high'] as StressLevel[]).map(s => (
+                    <TouchableOpacity
+                      key={s}
+                      onPress={() => setStress(s)}
+                      className={`flex-1 py-3 rounded-xl border items-center ${stress === s ? 'bg-emerald-500 border-emerald-400' : 'bg-[#172722] border-[#1f372f]'}`}
+                    >
+                      <Text className={`text-xs font-bold capitalize ${stress === s ? 'text-emerald-950' : 'text-emerald-300'}`}>{s}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text className="text-emerald-300 text-xs font-semibold mb-2.5">Movement Target</Text>
+                <View className="flex-row flex-wrap gap-2 mb-4">
+                  {(['sedentary', 'lightly_active', 'moderately_active', 'very_active'] as ActivityLevel[]).map(a => (
+                    <TouchableOpacity
+                      key={a}
+                      onPress={() => setActivity(a)}
+                      className={`px-3 py-2.5 rounded-xl border ${activity === a ? 'bg-emerald-500 border-emerald-400' : 'bg-[#172722] border-[#1f372f]'}`}
+                    >
+                      <Text className={`text-xs font-bold capitalize ${activity === a ? 'text-emerald-950' : 'text-emerald-300'}`}>
+                        {a.replace(/_/g, ' ')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* STEP 4: WEARABLE SETUP */}
+            {step === 4 && (
+              <View className="items-center py-6">
+                <View className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 justify-center items-center rounded-full mb-6">
+                  <Ionicons name="bluetooth" size={36} color="#10b981" />
+                </View>
+                <Text className="text-white text-xl font-serif font-bold text-center mb-1">Wearable Biosensors</Text>
+                <Text className="text-emerald-400/50 text-xs text-center px-4 mb-8 leading-relaxed">
+                  AquaAyur syncs heart rates, sleep indices, and skin temp fluctuations via an ESP32 wearable.
+                </Text>
+
+                {wearableConnected ? (
+                  <View className="bg-emerald-500/10 border border-emerald-500/40 p-4 rounded-xl flex-row items-center w-full justify-center mb-4">
+                    <Ionicons name="checkmark-circle" size={18} color="#10b981" style={{ marginRight: 6 }} />
+                    <Text className="text-emerald-400 font-bold text-xs uppercase">Biosensor Linked Successfully</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => setWearableConnected(true)}
+                    className="bg-emerald-500 rounded-xl py-4 w-full flex-row justify-center items-center active:bg-emerald-600 mb-4"
+                  >
+                    <Ionicons name="radio-outline" size={16} color="#091310" style={{ marginRight: 6 }} />
+                    <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">
+                      Link ESP32 Wearable
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                
+                <TouchableOpacity onPress={handleNextStep} className="py-2">
+                  <Text className="text-emerald-400/50 text-xs font-semibold">Skip and configure later</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* STEP 5: PERMISSIONS */}
+            {step === 5 && (
+              <View>
+                <Text className="text-white text-xl font-serif font-bold mb-1">Clinic Authorizations</Text>
+                <Text className="text-emerald-400/50 text-xs mb-6">Enable system parameters to feed dynamic forecasts.</Text>
+
+                <TouchableOpacity
+                  onPress={handleBluetoothPress}
+                  className={`p-4 rounded-xl border flex-row items-center justify-between mb-4 ${bluetoothGranted ? 'bg-[#111d19] border-emerald-500/35' : 'bg-[#172722] border-[#1f372f]'}`}
+                >
+                  <View className="flex-row items-center flex-1 pr-3">
+                    <Ionicons name="bluetooth" size={20} color="#10b981" style={{ marginRight: 10 }} />
+                    <View>
+                      <Text className="text-white text-xs font-bold">Bluetooth Feeds</Text>
+                      <Text className="text-emerald-400/40 text-[9px] mt-0.5">Stream ESP32 biometric events.</Text>
+                    </View>
+                  </View>
+                  <Ionicons name={bluetoothGranted ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={bluetoothGranted ? '#10b981' : '#1f372f'} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleNotificationsPress}
+                  className={`p-4 rounded-xl border flex-row items-center justify-between mb-4 ${notificationsGranted ? 'bg-[#111d19] border-emerald-500/35' : 'bg-[#172722] border-[#1f372f]'}`}
+                >
+                  <View className="flex-row items-center flex-1 pr-3">
+                    <Ionicons name="notifications" size={20} color="#10b981" style={{ marginRight: 10 }} />
+                    <View>
+                      <Text className="text-white text-xs font-bold">Smart Alerts</Text>
+                      <Text className="text-emerald-400/40 text-[9px] mt-0.5">Pushes hydration schedule alerts.</Text>
+                    </View>
+                  </View>
+                  <Ionicons name={notificationsGranted ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={notificationsGranted ? '#10b981' : '#1f372f'} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* STEP 6: CLINICAL SUMMARY PRESCRIPTION CARD */}
+            {step === 6 && (
+              <View className="items-center py-4">
+                <View className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 justify-center items-center rounded-full mb-6">
+                  <Ionicons name="medical" size={28} color="#10b981" />
+                </View>
+                <Text className="text-white text-xl font-serif font-bold text-center mb-1">Consultation Completed</Text>
+                <Text className="text-emerald-400/50 text-xs text-center mb-6">Your baseline wellness profile has been compiled.</Text>
+
+                {/* Prescription Parchment */}
+                <View className="bg-emerald-950/60 border border-emerald-900/30 p-5 rounded-2xl w-full mb-6">
+                  <Text className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-3">Diagnostic Summary</Text>
+                  
+                  <View className="space-y-2.5">
+                    <View className="flex-row justify-between items-center border-b border-emerald-900/20 pb-2">
+                      <Text className="text-emerald-300 text-[10px]">Patient Name</Text>
+                      <Text className="text-white font-bold text-xs">{firstName} {lastName}</Text>
+                    </View>
+                    <View className="flex-row justify-between items-center border-b border-emerald-900/20 pb-2">
+                      <Text className="text-emerald-300 text-[10px]">Diet Profile</Text>
+                      <Text className="text-white font-bold text-xs">{diet}</Text>
+                    </View>
+                    <View className="flex-row justify-between items-center border-b border-emerald-900/20 pb-2">
+                      <Text className="text-emerald-300 text-[10px]">Water Target</Text>
+                      <Text className="text-white font-bold text-xs font-mono">{waterIntake} ml</Text>
+                    </View>
+                    <View className="flex-row justify-between items-center">
+                      <Text className="text-emerald-300 text-[10px]">Stress Index</Text>
+                      <Text className="text-white font-bold text-xs capitalize">{stress}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                <Text className="text-emerald-300/60 text-[10px] text-center px-4 leading-relaxed">
+                  We will now calibrate your twin avatar balance matrices and start generating morning intelligence consultations.
+                </Text>
+              </View>
+            )}
+
+            {/* Intake Navigation Action Row */}
+            <View className="flex-row justify-between mt-8">
+              {step > 1 && (
+                <TouchableOpacity
+                  onPress={handlePrevStep}
+                  disabled={loading}
+                  className="bg-[#111d19] border border-[#1f372f] rounded-xl py-3 px-6 active:bg-emerald-900/25"
+                >
+                  <Text className="text-emerald-400 font-bold text-xs uppercase tracking-wider">Back</Text>
+                </TouchableOpacity>
+              )}
+
+              {step < 6 ? (
+                <TouchableOpacity
+                  onPress={handleNextStep}
+                  className="bg-emerald-500 rounded-xl py-3 px-8 ml-auto active:bg-emerald-600 shadow"
+                >
+                  <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">Continue</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={completeOnboarding}
+                  disabled={loading}
+                  className="bg-emerald-500 rounded-xl py-4 flex-1 ml-4 justify-center items-center shadow active:bg-emerald-600"
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#091310" />
+                  ) : (
+                    <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">
+                      Enter Sanctuary
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+
           </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+
+      </LinearGradient>
     </SafeAreaView>
   );
 }

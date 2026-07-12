@@ -40,52 +40,46 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Mirror',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={21} color={color} />
+            <Ionicons name={focused ? 'body' : 'body-outline'} size={21} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="coach"
+        name="dinacharya"
         options={{
-          title: 'Coach',
+          title: 'Path',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'} size={21} color={color} />
+            <Ionicons name={focused ? 'sunny' : 'sunny-outline'} size={21} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="insights"
         options={{
-          title: 'Insights',
+          title: 'Oracle',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'analytics' : 'analytics-outline'} size={21} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="device"
-        options={{
-          title: 'Devices',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'bluetooth' : 'bluetooth-outline'} size={21} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} size={21} color={color} />
+            <Ionicons name={focused ? 'eye' : 'eye-outline'} size={21} color={color} />
           ),
         }}
       />
 
       {/* Hidden Screens (Navigate-able but omitted from bottom tab bar) */}
       <Tabs.Screen
-        name="dinacharya"
+        name="coach"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="device"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
         options={{
           href: null,
         }}
@@ -122,6 +116,12 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="settings"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="simulator"
         options={{
           href: null,
         }}

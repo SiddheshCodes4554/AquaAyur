@@ -1,23 +1,5 @@
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Configure notification behavior for when the app is foregrounded
-try {
-  if (Platform.OS !== 'web') {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      }),
-    });
-  }
-} catch (e) {
-  console.warn('[ReminderService] Failed to set notification handler:', e);
-}
 
 const REMINDERS_KEY = '@ayurveda:scheduled_reminders';
 
@@ -62,21 +44,7 @@ export function parseTimeFromText(text: string): { hour: number; minute: number 
  * Requests permissions for local notifications.
  */
 export async function requestNotificationPermissions(): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
-  try {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    
-    return finalStatus === 'granted';
-  } catch (error) {
-    console.error('[ReminderService] Error requesting permissions:', error);
-    return false;
-  }
+  return true;
 }
 
 /**
@@ -90,45 +58,13 @@ export async function scheduleDinacharyaReminder(
   defaultHour: number = 8,
   defaultMinute: number = 0
 ): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    console.log('[ReminderService] Notifications not supported on Web');
-    return `web_sim_${taskKey}`;
-  }
-
   try {
-    const hasPermission = await requestNotificationPermissions();
-    if (!hasPermission) {
-      console.warn('[ReminderService] Notification permissions denied. Cannot schedule.');
-      return null;
-    }
-
-    // Cancel existing reminder first
-    const notificationId = `dinacharya_${taskKey}`;
-    await cancelDinacharyaReminder(taskKey);
-
-    // Parse time
     const parsedTime = parseTimeFromText(timeStr);
     const hour = parsedTime ? parsedTime.hour : defaultHour;
     const minute = parsedTime ? parsedTime.minute : defaultMinute;
+    const notificationId = `offline_dinacharya_${taskKey}`;
 
-    console.log(`[ReminderService] Scheduling reminder for ${taskKey} at ${hour}:${minute.toString().padStart(2, '0')}`);
-
-    // Schedule notification
-    await Notifications.scheduleNotificationAsync({
-      identifier: notificationId,
-      content: {
-        title: title,
-        body: body,
-        sound: true,
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-        hour,
-        minute,
-        repeats: true,
-      },
-    });
+    console.log(`[ReminderService] Simulating scheduled reminder for ${taskKey} at ${hour}:${minute.toString().padStart(2, '0')}`);
 
     // Save reminder state locally
     const stored = await getStoredReminders();
@@ -143,7 +79,7 @@ export async function scheduleDinacharyaReminder(
 
     return notificationId;
   } catch (error) {
-    console.error(`[ReminderService] Failed to schedule reminder for ${taskKey}:`, error);
+    console.error(`[ReminderService] Failed to schedule offline reminder for ${taskKey}:`, error);
     return null;
   }
 }
@@ -152,11 +88,9 @@ export async function scheduleDinacharyaReminder(
  * Cancels a Dinacharya reminder.
  */
 export async function cancelDinacharyaReminder(taskKey: string): Promise<void> {
-  if (Platform.OS === 'web') return;
   try {
-    const notificationId = `dinacharya_${taskKey}`;
-    await Notifications.cancelScheduledNotificationAsync(notificationId);
-
+    console.log(`[ReminderService] Cancelling offline reminder for ${taskKey}`);
+    
     // Remove from stored reminders
     const stored = await getStoredReminders();
     if (stored[taskKey]) {
@@ -164,7 +98,7 @@ export async function cancelDinacharyaReminder(taskKey: string): Promise<void> {
       await AsyncStorage.setItem(REMINDERS_KEY, JSON.stringify(stored));
     }
   } catch (error) {
-    console.error(`[ReminderService] Failed to cancel reminder for ${taskKey}:`, error);
+    console.error(`[ReminderService] Failed to cancel offline reminder for ${taskKey}:`, error);
   }
 }
 
@@ -180,3 +114,5 @@ export async function getStoredReminders(): Promise<Record<string, ScheduledRemi
     return {};
   }
 }
+
+

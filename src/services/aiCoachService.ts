@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { evaluateAyurRules, buildGroundedAIPrompt } from './ayurRuleEngine';
 
 const GROQ_API_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY || '';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -102,6 +103,21 @@ export async function generateCoachResponse(
     throw new Error('Failed to load Ayurvedic daily context for AI Coach.');
   }
 
+  // 1b. Run Rule Engine for Grounded Facts
+  const vataPercentage = context.dosha?.vata_percentage || 33;
+  const pittaPercentage = context.dosha?.pitta_percentage || 33;
+  const kaphaPercentage = context.dosha?.kapha_percentage || 34;
+  const agniScoreVal = context.agni?.agni_score || 75;
+  const ojasScoreVal = context.ojas?.ojas_score || 78;
+
+  const groundedFacts = evaluateAyurRules(
+    { vata: vataPercentage, pitta: pittaPercentage, kapha: kaphaPercentage },
+    agniScoreVal,
+    ojasScoreVal
+  );
+
+  const groundingPromptBlock = buildGroundedAIPrompt(groundedFacts);
+
   // 2. Format context for prompt injection
   const nameLabel = context.profile?.full_name || 'Yogi';
   const dominantDosha = context.profile?.dominant_dosha || 'tridoshic';
@@ -149,6 +165,8 @@ export async function generateCoachResponse(
   const systemPrompt = `You are AquaGuru, a wise, supportive, and expert Ayurvedic AI Wellness Coach.
 Your goal is to guide the user (${nameLabel}) in balancing their Doshas, explaining biometric anomalies, and providing actionable diet, lifestyle, and hydration advice.
 
+${groundingPromptBlock}
+
 USER CONTEXT DATABASE SNAPSHOT:
 1. PROFILE CONSTITUTION: Dominant Dosha: ${dominantDosha}
 2. DYNAMIC BALANCE STATUS:
@@ -165,17 +183,6 @@ ${vitalsSection}
 ${hydrationSection}
 8. FOOD JOURNAL NUTRITION LOGS:
 ${nutritionSection}
-
-AYURVEDIC GUIDANCE RULES:
-- Vata (Air/Ether): Ground irregular/cold vitals with warm, cooked, nourishing foods. Recommend calm pacing and sleep.
-- Pitta (Fire/Water): Cool high pulse/temp (heat) with sweet, bitter, refreshing items. Recommend cooling pranayama and rest.
-- Kapha (Earth/Water): Stimulate low heart rate or sluggish states with warm, dry, pungent spices and active exercise.
-
-COACHING OBJECTIVES:
-1. Personalized Ayurveda Insights: Correlate vitals (HR/Temp) and sleep quality to the user's dynamic Dosha percentages.
-2. Daily Corrections: Call out specific diet or hydration tweaks they need to perform today based on their food logs or low Agni score.
-3. Early Imbalance Detection: Highlight any rising element warnings (e.g. rising Pitta thermal spikes or Vata sleeplessness).
-4. Preventive Recommendations: Suggest herbal remedies, teas, or specific timing fixes (e.g. eating main meals strictly at noon).
 
 RESPONSE INSTRUCTIONS:
 - Answer directly, referring to their real-time vitals and lifestyle status.

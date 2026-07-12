@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Platform, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Platform, Alert, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDinacharyaStore } from '../../store/useDinacharyaStore';
+import { useHydrationStore } from '../../store/useHydrationStore';
+import { useSleepStore } from '../../store/useSleepStore';
 
 type RoutineTab = 'morning' | 'afternoon' | 'evening';
 
@@ -22,14 +24,84 @@ interface RoutineItem {
 export default function DinacharyaScreen() {
   const { user } = useAuthStore();
   const { todayDinacharya, completions, reminders, loading, fetchTodayDinacharya, toggleTaskCompletion, toggleReminder } = useDinacharyaStore();
+  const todayTotalMl = useHydrationStore(state => state.todayTotalMl);
+  const waterGoal = useAuthStore(state => state.profile?.daily_water_goal_ml || 2500);
+
   const [activeTab, setActiveTab] = useState<RoutineTab>('morning');
-  const [weatherFilter, setWeatherFilter] = useState<string>('Pleasant');
+
+  // Quick Action Modal States
+  const [showSleepLogger, setShowSleepLogger] = useState(false);
+  const [sleepHoursInput, setSleepHoursInput] = useState('8');
+  const [sleepScoreInput, setSleepScoreInput] = useState('80');
+  const [loggingSleep, setLoggingSleep] = useState(false);
+
+  const [showHydrationModal, setShowHydrationModal] = useState(false);
+
+  // Breathing Coach State
+  const [showBreathingCoach, setShowBreathingCoach] = useState(false);
+  const [breathingPhase, setBreathingPhase] = useState<'Idle' | 'Inhale' | 'Hold' | 'Exhale'>('Idle');
+  const [breathingProgress, setBreathingProgress] = useState(0);
+  const [breathingCycles, setBreathingCycles] = useState(0);
 
   useEffect(() => {
     if (user?.id) {
       fetchTodayDinacharya(user.id);
     }
   }, [user?.id]);
+
+  // Breathing coach timer logic
+  useEffect(() => {
+    if (breathingPhase === 'Idle') {
+      setBreathingProgress(0);
+      return;
+    }
+    let interval: any;
+    let ticks = 0;
+    const phaseDurations = { Inhale: 4, Hold: 4, Exhale: 4 };
+
+    interval = setInterval(() => {
+      ticks += 1;
+      const duration = phaseDurations[breathingPhase];
+      const progress = (ticks / (duration * 10)) * 100;
+      setBreathingProgress(progress);
+
+      if (ticks >= duration * 10) {
+        ticks = 0;
+        if (breathingPhase === 'Inhale') {
+          setBreathingPhase('Hold');
+        } else if (breathingPhase === 'Hold') {
+          setBreathingPhase('Exhale');
+        } else if (breathingPhase === 'Exhale') {
+          setBreathingCycles(c => c + 1);
+          setBreathingPhase('Inhale');
+        }
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [breathingPhase]);
+
+  const handleLogSleep = async () => {
+    if (!user?.id) return;
+    const hours = parseFloat(sleepHoursInput);
+    const score = parseInt(sleepScoreInput, 10);
+    if (isNaN(hours) || isNaN(score)) {
+      Alert.alert('Error', 'Please enter valid numbers');
+      return;
+    }
+    setLoggingSleep(true);
+    try {
+      const durationMinutes = Math.round(hours * 60);
+      const endTime = new Date().toISOString();
+      const startTime = new Date(Date.now() - durationMinutes * 60 * 1000).toISOString();
+      await useSleepStore.getState().logSleep(user.id, startTime, endTime, durationMinutes, score);
+      setShowSleepLogger(false);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to log sleep');
+    } finally {
+      setLoggingSleep(false);
+    }
+  };
 
   if (loading && !todayDinacharya) {
     return (
@@ -50,7 +122,7 @@ export default function DinacharyaScreen() {
   };
 
   const getHydrationTime = () => {
-    return '7:00 AM'; // Default morning hydration time
+    return '7:00 AM';
   };
 
   const getMealTime = () => {
@@ -170,22 +242,16 @@ export default function DinacharyaScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#020b08' }}>
       <LinearGradient colors={['#03120f', '#010605']} className="flex-1">
         {/* Header Navigation */}
-        <View className="px-6 py-4 flex-row items-center border-b border-emerald-900/35">
-          <TouchableOpacity 
-            onPress={() => router.back()} 
-            className="p-1 rounded-lg bg-emerald-900/20 border border-emerald-800/30 mr-4 active:bg-emerald-900/40"
-          >
-            <Ionicons name="chevron-back" size={20} color="#34d399" />
-          </TouchableOpacity>
+        <View className="px-6 py-4 flex-row items-center justify-between border-b border-emerald-900/35">
           <View>
-            <Text className="text-white text-lg font-bold">Circadian Routine</Text>
+            <Text className="text-white text-lg font-bold">Circadian Path</Text>
             <Text className="text-emerald-400/50 text-[10px] uppercase font-bold tracking-wider">Dynamic Dinacharya Plan</Text>
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }} className="px-6 py-4" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 110 }} className="px-6 py-4" showsVerticalScrollIndicator={false}>
           
-          {/* Glassmorphism Progress tracking Card */}
+          {/* Progress tracking Card */}
           <View className="bg-[#051f18]/30 border border-emerald-800/25 p-5 rounded-3xl mb-6 relative overflow-hidden shadow-lg">
             <View className="flex-row justify-between items-center z-10">
               <View className="flex-1 pr-4">
@@ -206,6 +272,45 @@ export default function DinacharyaScreen() {
                 <Text className="text-emerald-500/60 text-[8px] uppercase font-bold">Done</Text>
               </View>
             </View>
+          </View>
+
+          {/* Quick Action Logger Panel */}
+          <Text className="text-emerald-300/80 text-xs font-bold uppercase tracking-widest mb-3">Path Quick Loggers</Text>
+          <View className="flex-row gap-3 mb-6">
+            <TouchableOpacity
+              onPress={() => setShowHydrationModal(true)}
+              className="flex-1 bg-[#051f18]/30 border border-emerald-800/25 p-3 rounded-2xl items-center active:bg-emerald-900/10"
+            >
+              <Ionicons name="water-outline" size={18} color="#0ea5e9" />
+              <Text className="text-white text-[10px] font-bold mt-1.5">Log Water</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setShowSleepLogger(true)}
+              className="flex-1 bg-[#051f18]/30 border border-emerald-800/25 p-3 rounded-2xl items-center active:bg-emerald-900/10"
+            >
+              <Ionicons name="moon-outline" size={18} color="#a855f7" />
+              <Text className="text-white text-[10px] font-bold mt-1.5">Log Sleep</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                setShowBreathingCoach(true);
+                setBreathingPhase('Inhale');
+              }}
+              className="flex-1 bg-[#051f18]/30 border border-emerald-800/25 p-3 rounded-2xl items-center active:bg-emerald-900/10"
+            >
+              <Ionicons name="sync-outline" size={18} color="#38bdf8" />
+              <Text className="text-white text-[10px] font-bold mt-1.5">Breathing</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/food-journal')}
+              className="flex-1 bg-[#051f18]/30 border border-emerald-800/25 p-3 rounded-2xl items-center active:bg-emerald-900/10"
+            >
+              <Ionicons name="restaurant-outline" size={18} color="#34d399" />
+              <Text className="text-white text-[10px] font-bold mt-1.5">Log Meal</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Routine Tabs */}
@@ -244,14 +349,14 @@ export default function DinacharyaScreen() {
 
           {/* Dynamic Routine Timeline */}
           <View className="space-y-4">
-            {getFilteredItems().map((item, idx) => {
+            {getFilteredItems().map((item) => {
               const isCompleted = completions ? !!completions[item.key] : false;
               const isReminderSet = reminders ? !!reminders[item.key] : false;
 
               return (
                 <View 
                   key={item.key} 
-                  className="bg-[#051f18]/25 border border-emerald-900/20 rounded-2xl overflow-hidden"
+                  className="bg-[#051f18]/25 border border-emerald-900/20 rounded-2xl overflow-hidden mb-3"
                 >
                   <LinearGradient colors={item.gradientColors} className="p-5">
                     
@@ -275,7 +380,7 @@ export default function DinacharyaScreen() {
                           <Ionicons 
                             name={isReminderSet ? 'notifications' : 'notifications-outline'} 
                             size={14} 
-                            color={isReminderSet ? '#38bdf8' : '#34d399/70'} 
+                            color={isReminderSet ? '#38bdf8' : '#34d399'} 
                           />
                         </TouchableOpacity>
 
@@ -319,7 +424,7 @@ export default function DinacharyaScreen() {
 
           {/* Ayurvedic Insights Footer Tip */}
           <View className="bg-emerald-950/10 border border-emerald-900/10 p-4 rounded-2xl mt-6">
-            <Text className="text-emerald-300 text-xs font-semibold mb-1 flex-row items-center">
+            <Text className="text-emerald-300 text-xs font-semibold mb-1">
               💡 Ayurvedic Biological Clock
             </Text>
             <Text className="text-emerald-100/50 text-[11px] leading-relaxed">
@@ -327,6 +432,202 @@ export default function DinacharyaScreen() {
             </Text>
           </View>
         </ScrollView>
+
+        {/* 1. BREATHING COACH OVERLAY MODAL */}
+        <Modal
+          visible={showBreathingCoach}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => {
+            setShowBreathingCoach(false);
+            setBreathingPhase('Idle');
+          }}
+        >
+          <View className="flex-1 bg-[#020b08]/95 items-center justify-center px-6">
+            <View className="bg-[#051f18]/40 border border-emerald-800/40 p-8 rounded-3xl items-center w-full max-w-sm relative">
+              <TouchableOpacity
+                onPress={() => {
+                  setShowBreathingCoach(false);
+                  setBreathingPhase('Idle');
+                }}
+                className="absolute right-4 top-4 p-1.5 rounded-full bg-emerald-950 border border-emerald-900/30"
+              >
+                <Ionicons name="close" size={20} color="#34d399" />
+              </TouchableOpacity>
+
+              <Text className="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1">Pranayama Guide</Text>
+              <Text className="text-white text-lg font-bold mb-8">Nadi Shodhana Coach</Text>
+
+              {/* Breathing Circle Ring Animation */}
+              <View className="w-48 h-48 items-center justify-center mb-10 relative">
+                <View
+                  style={{
+                    width: 110 + breathingProgress * 0.7,
+                    height: 110 + breathingProgress * 0.7,
+                    opacity: 0.15,
+                  }}
+                  className="absolute bg-emerald-400 rounded-full"
+                />
+                <View
+                  style={{
+                    width: 90 + breathingProgress * 0.5,
+                    height: 90 + breathingProgress * 0.5,
+                    opacity: 0.3,
+                  }}
+                  className="absolute bg-emerald-500 rounded-full"
+                />
+                <View className="w-24 h-24 rounded-full bg-emerald-950 border-2 border-emerald-400 items-center justify-center shadow-lg">
+                  <Text className="text-white text-sm font-bold font-mono capitalize">
+                    {breathingPhase === 'Idle' ? 'Start' : breathingPhase}
+                  </Text>
+                </View>
+              </View>
+
+              <Text className="text-emerald-300 text-xs text-center font-medium px-4 mb-6">
+                {breathingPhase === 'Inhale' && 'Slowly breathe in cooling ambient energy.'}
+                {breathingPhase === 'Hold' && 'Hold breath. Feel stability at your core.'}
+                {breathingPhase === 'Exhale' && 'Slowly release excess Vata tension.'}
+                {breathingPhase === 'Idle' && 'Find a comfortable seated posture.'}
+              </Text>
+
+              <View className="flex-row items-center gap-2 mb-6 bg-emerald-950/60 px-4 py-1.5 rounded-full">
+                <Ionicons name="time" size={14} color="#34d399" />
+                <Text className="text-emerald-400/90 text-xs font-bold font-mono">
+                  Cycles Completed: {breathingCycles}
+                </Text>
+              </View>
+
+              {breathingPhase === 'Idle' ? (
+                <TouchableOpacity
+                  onPress={() => setBreathingPhase('Inhale')}
+                  className="bg-emerald-500 px-8 py-3 rounded-xl active:bg-emerald-600 w-full items-center"
+                >
+                  <Text className="text-emerald-950 font-bold text-sm">Begin Practice</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={() => setBreathingPhase('Idle')}
+                  className="bg-red-500/10 border border-red-500/30 px-8 py-3 rounded-xl active:bg-red-500/20 w-full items-center"
+                >
+                  <Text className="text-red-400 font-bold text-sm">End Session</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </Modal>
+
+        {/* 2. HYDRATION LOGGER MODAL */}
+        <Modal
+          visible={showHydrationModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowHydrationModal(false)}
+        >
+          <View className="flex-1 bg-[#020b08]/90 justify-center items-center px-6">
+            <View className="bg-[#051f18]/40 border border-emerald-800/40 p-6 rounded-3xl w-full max-w-sm relative">
+              <TouchableOpacity
+                onPress={() => setShowHydrationModal(false)}
+                className="absolute right-4 top-4 p-1.5 rounded-full bg-emerald-950 border border-emerald-900/30"
+              >
+                <Ionicons name="close" size={18} color="#34d399" />
+              </TouchableOpacity>
+
+              <Text className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">Water Sync</Text>
+              <Text className="text-white text-base font-bold mb-4">Log Hydration intake</Text>
+
+              {/* Progress Detail */}
+              <View className="items-center mb-6">
+                <Text className="text-white text-3xl font-black font-mono">{todayTotalMl}</Text>
+                <Text className="text-emerald-400/60 text-xs">/ {waterGoal} ml logged today</Text>
+              </View>
+
+              <View className="flex-row gap-3">
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (user?.id) {
+                      await useHydrationStore.getState().logWater(user.id, 250);
+                      setShowHydrationModal(false);
+                    }
+                  }}
+                  className="flex-1 bg-emerald-500 py-3 rounded-xl active:bg-emerald-600 items-center shadow-md shadow-emerald-500/15"
+                >
+                  <Text className="text-emerald-950 font-bold text-xs">+250 ml</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (user?.id) {
+                      await useHydrationStore.getState().logWater(user.id, 500);
+                      setShowHydrationModal(false);
+                    }
+                  }}
+                  className="flex-1 bg-emerald-500 py-3 rounded-xl active:bg-emerald-600 items-center shadow-md shadow-emerald-500/15"
+                >
+                  <Text className="text-emerald-950 font-bold text-xs">+500 ml</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* 3. SLEEP LOGGER MODAL */}
+        <Modal
+          visible={showSleepLogger}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowSleepLogger(false)}
+        >
+          <View className="flex-1 bg-[#020b08]/90 justify-center items-center px-6">
+            <View className="bg-[#051f18]/40 border border-purple-800/30 p-6 rounded-3xl w-full max-w-sm relative">
+              <TouchableOpacity
+                onPress={() => setShowSleepLogger(false)}
+                className="absolute right-4 top-4 p-1.5 rounded-full bg-emerald-950 border border-emerald-900/30"
+              >
+                <Ionicons name="close" size={18} color="#c084fc" />
+              </TouchableOpacity>
+
+              <Text className="text-purple-400 text-xs font-bold uppercase tracking-wider mb-1">Sleep Mode</Text>
+              <Text className="text-white text-base font-bold mb-4">Record Sleep Offline</Text>
+
+              <View className="space-y-4 mb-6">
+                <View className="space-y-1">
+                  <Text className="text-emerald-400/60 text-[10px] uppercase font-bold">Hours Slept</Text>
+                  <TextInput
+                    value={sleepHoursInput}
+                    onChangeText={setSleepHoursInput}
+                    keyboardType="numeric"
+                    placeholder="e.g. 7.5"
+                    placeholderTextColor="#0b2e23"
+                    className="bg-emerald-950/80 border border-emerald-900/40 rounded-xl p-3 text-white text-sm font-bold"
+                    style={{ fontFamily: 'monospace' }}
+                  />
+                </View>
+                <View className="space-y-1">
+                  <Text className="text-emerald-400/60 text-[10px] uppercase font-bold">Sleep Quality (0-100)</Text>
+                  <TextInput
+                    value={sleepScoreInput}
+                    onChangeText={setSleepScoreInput}
+                    keyboardType="numeric"
+                    placeholder="e.g. 85"
+                    placeholderTextColor="#0b2e23"
+                    className="bg-emerald-950/80 border border-emerald-900/40 rounded-xl p-3 text-white text-sm font-bold"
+                    style={{ fontFamily: 'monospace' }}
+                  />
+                </View>
+              </View>
+
+              {loggingSleep ? (
+                <ActivityIndicator size="small" color="#c084fc" className="py-2" />
+              ) : (
+                <TouchableOpacity
+                  onPress={handleLogSleep}
+                  className="bg-purple-500 py-3.5 rounded-xl active:bg-purple-600 items-center w-full"
+                >
+                  <Text className="text-white font-bold text-sm">Save Log</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </Modal>
       </LinearGradient>
     </SafeAreaView>
   );

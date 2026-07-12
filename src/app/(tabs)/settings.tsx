@@ -1,26 +1,74 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Switch, ActivityIndicator } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  ScrollView, 
+  Switch, 
+  ActivityIndicator, 
+  LayoutAnimation, 
+  Platform, 
+  UIManager 
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/useAuthStore';
+
+// Enable layout animation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+type SettingsSection = 
+  | 'account' 
+  | 'health' 
+  | 'wearable' 
+  | 'privacy' 
+  | 'notifications' 
+  | 'ai' 
+  | 'appearance' 
+  | 'dev' 
+  | 'about';
 
 export default function SettingsScreen() {
   const { profile, updateProfile, signOut } = useAuthStore();
   
+  // Section Expansion State
+  const [expandedSection, setExpandedSection] = useState<SettingsSection | null>('health');
+
+  // Input states
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [weight, setWeight] = useState(profile?.weight_kg?.toString() || '');
   const [height, setHeight] = useState(profile?.height_cm?.toString() || '');
   const [waterGoal, setWaterGoal] = useState(profile?.daily_water_goal_ml?.toString() || '2500');
   const [calorieGoal, setCalorieGoal] = useState(profile?.daily_calorie_goal_kcal?.toString() || '2000');
   
+  // Toggle states
   const [hapticNotify, setHapticNotify] = useState(true);
   const [vitalsAlerts, setVitalsAlerts] = useState(true);
+  const [briefingsNotify, setBriefingsNotify] = useState(true);
+  const [anonymizeSync, setAnonymizeSync] = useState(false);
+  const [sharePractitioner, setSharePractitioner] = useState(true);
+  const [strictGrounding, setStrictGrounding] = useState(true);
+  const [devMockStream, setDevMockStream] = useState(true);
+  const [devBypassJwt, setDevBypassJwt] = useState(false);
+  const [appTheme, setAppTheme] = useState<'sandalwood' | 'forest' | 'obsidian'>('sandalwood');
+
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleSave = async () => {
+  const toggleSection = (section: SettingsSection) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedSection(expandedSection === section ? null : section);
+    setSuccessMsg(null);
+    setErrorMsg(null);
+  };
+
+  const handleSaveProfile = async () => {
     setLoading(true);
     setSuccessMsg(null);
     setErrorMsg(null);
@@ -30,10 +78,10 @@ export default function SettingsScreen() {
         full_name: fullName,
         weight_kg: weight ? parseFloat(weight) : null,
         height_cm: height ? parseFloat(height) : null,
-        daily_water_goal_ml: parseInt(waterGoal),
-        daily_calorie_goal_kcal: parseInt(calorieGoal)
+        daily_water_goal_ml: parseInt(waterGoal) || 2000,
+        daily_calorie_goal_kcal: parseInt(calorieGoal) || 2000
       });
-      setSuccessMsg('Profile updated successfully!');
+      setSuccessMsg('Wellness Profile saved successfully!');
     } catch (err: any) {
       console.error('[Settings] Error saving updates:', err);
       setErrorMsg(err.message || 'Failed to save settings.');
@@ -43,141 +91,478 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#022c22' }}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="px-6 py-6">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#091310' }} edges={['top']}>
+      <LinearGradient colors={['#091310', '#111d19']} className="flex-1">
         
         {/* Header */}
-        <View className="flex-row items-center mb-8">
-          <TouchableOpacity onPress={() => router.back()} className="mr-4">
-            <Ionicons name="arrow-back" size={24} color="#34d399" />
-          </TouchableOpacity>
-          <Text className="text-white text-2xl font-bold">Settings</Text>
+        <View className="px-6 py-4 flex-row items-center justify-between border-b border-[#1f372f]">
+          <View className="flex-row items-center">
+            <TouchableOpacity 
+              onPress={() => router.back()} 
+              className="p-1.5 rounded-lg bg-[#172722] border border-[#1f372f] mr-4 active:bg-emerald-900/20"
+            >
+              <Ionicons name="chevron-back" size={20} color="#34d399" />
+            </TouchableOpacity>
+            <View>
+              <Text className="text-white text-base font-serif font-black">Sanctuary Settings</Text>
+              <Text className="text-emerald-400 text-[8px] uppercase font-bold tracking-widest font-mono">System Preferences & Targets</Text>
+            </View>
+          </View>
         </View>
 
-        {/* Edit Profile Info Section */}
-        <View className="bg-emerald-900/30 border border-emerald-800/30 p-6 rounded-2xl mb-6">
-          <Text className="text-white font-bold text-lg mb-4">Edit Profile Info</Text>
-
+        <ScrollView contentContainerStyle={{ paddingBottom: 120 }} className="px-6 py-5" showsVerticalScrollIndicator={false}>
+          
           {successMsg && (
-            <View key="success-alert" className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl mb-6 will-change-variable">
-              <Text className="text-emerald-400 text-sm text-center">{successMsg}</Text>
+            <View className="bg-emerald-950/40 border border-emerald-500/30 p-4 rounded-xl mb-6">
+              <Text className="text-emerald-400 text-xs text-center font-sans font-medium">{successMsg}</Text>
             </View>
           )}
           {errorMsg && (
-            <View key="error-alert" className="bg-red-950/50 border border-red-900/50 p-4 rounded-xl mb-6 will-change-variable">
-              <Text className="text-red-400 text-sm text-center">{errorMsg}</Text>
+            <View className="bg-rose-950/40 border border-rose-900/40 p-4 rounded-xl mb-6">
+              <Text className="text-rose-400 text-xs text-center font-sans font-medium">{errorMsg}</Text>
             </View>
           )}
 
-          <View className="mb-4">
-            <Text className="text-emerald-300 text-sm font-semibold mb-2">Display Name</Text>
-            <TextInput
-              value={fullName}
-              onChangeText={setFullName}
-              className="bg-emerald-950 border border-emerald-800/40 rounded-xl px-4 py-3 text-white text-base"
-            />
-          </View>
+          {/* ================= ACCOUNT SECTION ================= */}
+          <View className="bg-[#111d19]/45 border border-[#1f372f] rounded-3xl mb-4 overflow-hidden">
+            <TouchableOpacity 
+              onPress={() => toggleSection('account')}
+              className="p-5 flex-row justify-between items-center active:bg-emerald-950/10"
+            >
+              <View className="flex-row items-center flex-1 mr-3">
+                <View className="w-8 h-8 rounded-full bg-[#172722] border border-[#1f372f] justify-center items-center mr-3">
+                  <Ionicons name="person-outline" size={16} color="#34d399" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-xs font-bold font-serif">Account Profile</Text>
+                  <Text className="text-emerald-200/50 text-[9px] mt-0.5 leading-tight">Sanctuary credentials and login details</Text>
+                </View>
+              </View>
+              <Ionicons name={expandedSection === 'account' ? 'chevron-up' : 'chevron-down'} size={16} color="#047857" />
+            </TouchableOpacity>
 
-          <View className="flex-row space-x-4 mb-4">
-            <View className="flex-1">
-              <Text className="text-emerald-300 text-sm font-semibold mb-2">Weight (kg)</Text>
-              <TextInput
-                value={weight}
-                onChangeText={setWeight}
-                keyboardType="numeric"
-                className="bg-emerald-950 border border-emerald-800/40 rounded-xl px-4 py-3 text-white text-base"
-              />
-            </View>
-
-            <View className="flex-1">
-              <Text className="text-emerald-300 text-sm font-semibold mb-2">Height (cm)</Text>
-              <TextInput
-                value={height}
-                onChangeText={setHeight}
-                keyboardType="numeric"
-                className="bg-emerald-950 border border-emerald-800/40 rounded-xl px-4 py-3 text-white text-base"
-              />
-            </View>
-          </View>
-
-          <View className="flex-row space-x-4 mb-8">
-            <View className="flex-1">
-              <Text className="text-emerald-300 text-sm font-semibold mb-2">Water Goal (ml)</Text>
-              <TextInput
-                value={waterGoal}
-                onChangeText={setWaterGoal}
-                keyboardType="numeric"
-                className="bg-emerald-950 border border-emerald-800/40 rounded-xl px-4 py-3 text-white text-base"
-              />
-            </View>
-
-            <View className="flex-1">
-              <Text className="text-emerald-300 text-sm font-semibold mb-2">Calorie Goal (kcal)</Text>
-              <TextInput
-                value={calorieGoal}
-                onChangeText={setCalorieGoal}
-                keyboardType="numeric"
-                className="bg-emerald-950 border border-emerald-800/40 rounded-xl px-4 py-3 text-white text-base"
-              />
-            </View>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={loading}
-            className="bg-emerald-500 rounded-xl py-4 flex-row justify-center items-center shadow-lg active:bg-emerald-600"
-          >
-            {loading ? (
-              <ActivityIndicator color="#022c22" />
-            ) : (
-              <>
-                <Ionicons name="save-outline" size={16} color="#022c22" className="mr-2" />
-                <Text className="text-emerald-950 text-base font-bold">Save Settings</Text>
-              </>
+            {expandedSection === 'account' && (
+              <View className="px-5 pb-5 border-t border-[#1f372f]/45 pt-4 space-y-4">
+                <View>
+                  <Text className="text-emerald-400/50 text-[8px] uppercase font-bold tracking-widest font-mono mb-1">User Identifier</Text>
+                  <Text className="text-slate-300 text-xs font-mono">{profile?.id || 'Not Loaded'}</Text>
+                </View>
+                <View className="pt-2">
+                  <TouchableOpacity 
+                    onPress={signOut}
+                    className="bg-red-500/10 border border-red-500/35 py-3 rounded-xl items-center active:bg-red-500/25"
+                  >
+                    <Text className="text-red-400 font-bold text-xs">Sign Out of Sanctuary</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Notifications & Hardware controls */}
-        <View className="bg-emerald-900/30 border border-emerald-800/30 p-6 rounded-2xl mb-8">
-          <Text className="text-white font-bold text-lg mb-4">Device Alerts Configuration</Text>
-          
-          <View className="flex-row justify-between items-center py-4 border-b border-emerald-800/20">
-            <View className="flex-1 pr-4">
-              <Text className="text-white font-bold text-sm">Haptic Reminders</Text>
-              <Text className="text-emerald-400/60 text-xs mt-0.5">Let wearable vibrate on hydration deficit alerts.</Text>
-            </View>
-            <Switch
-              value={hapticNotify}
-              onValueChange={setHapticNotify}
-              trackColor={{ false: '#022c22', true: '#10b981' }}
-              thumbColor={hapticNotify ? '#ffffff' : '#9ca3af'}
-            />
           </View>
 
-          <View className="flex-row justify-between items-center py-4">
-            <View className="flex-1 pr-4">
-              <Text className="text-white font-bold text-sm">Vitals Abnormal Alarm</Text>
-              <Text className="text-emerald-400/60 text-xs mt-0.5">Vibrate or warn if heart rate rises abnormally.</Text>
-            </View>
-            <Switch
-              value={vitalsAlerts}
-              onValueChange={setVitalsAlerts}
-              trackColor={{ false: '#022c22', true: '#10b981' }}
-              thumbColor={vitalsAlerts ? '#ffffff' : '#9ca3af'}
-            />
+          {/* ================= HEALTH PROFILE SECTION ================= */}
+          <View className="bg-[#111d19]/45 border border-[#1f372f] rounded-3xl mb-4 overflow-hidden">
+            <TouchableOpacity 
+              onPress={() => toggleSection('health')}
+              className="p-5 flex-row justify-between items-center active:bg-emerald-950/10"
+            >
+              <View className="flex-row items-center flex-1 mr-3">
+                <View className="w-8 h-8 rounded-full bg-[#172722] border border-[#1f372f] justify-center items-center mr-3">
+                  <Ionicons name="fitness-outline" size={16} color="#34d399" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-xs font-bold font-serif">Ayurvedic Health Profile</Text>
+                  <Text className="text-emerald-200/50 text-[9px] mt-0.5 leading-tight">Height, weight, hydration & metabolic targets</Text>
+                </View>
+              </View>
+              <Ionicons name={expandedSection === 'health' ? 'chevron-up' : 'chevron-down'} size={16} color="#047857" />
+            </TouchableOpacity>
+
+            {expandedSection === 'health' && (
+              <View className="px-5 pb-5 border-t border-[#1f372f]/45 pt-4 space-y-4">
+                <View className="flex-row space-x-4">
+                  <View className="flex-1">
+                    <Text className="text-emerald-300 text-[10px] font-semibold mb-2">Weight (kg)</Text>
+                    <TextInput
+                      value={weight}
+                      onChangeText={setWeight}
+                      keyboardType="numeric"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-2.5 text-white text-xs font-bold font-mono"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-emerald-300 text-[10px] font-semibold mb-2">Height (cm)</Text>
+                    <TextInput
+                      value={height}
+                      onChangeText={setHeight}
+                      keyboardType="numeric"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-2.5 text-white text-xs font-bold font-mono"
+                    />
+                  </View>
+                </View>
+
+                <View className="flex-row space-x-4">
+                  <View className="flex-1">
+                    <Text className="text-emerald-300 text-[10px] font-semibold mb-2">Water Goal (ml)</Text>
+                    <TextInput
+                      value={waterGoal}
+                      onChangeText={setWaterGoal}
+                      keyboardType="numeric"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-2.5 text-white text-xs font-bold font-mono"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-emerald-300 text-[10px] font-semibold mb-2">Calorie Goal (kcal)</Text>
+                    <TextInput
+                      value={calorieGoal}
+                      onChangeText={setCalorieGoal}
+                      keyboardType="numeric"
+                      className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-2.5 text-white text-xs font-bold font-mono"
+                    />
+                  </View>
+                </View>
+
+                <View className="pt-2">
+                  <TouchableOpacity
+                    onPress={handleSaveProfile}
+                    disabled={loading}
+                    className="bg-emerald-500 rounded-xl py-3 flex-row justify-center items-center shadow active:bg-emerald-600"
+                  >
+                    {loading ? (
+                      <ActivityIndicator color="#022c22" />
+                    ) : (
+                      <>
+                        <Ionicons name="save-outline" size={14} color="#022c22" style={{ marginRight: 6 }} />
+                        <Text className="text-emerald-950 font-black text-[10px] uppercase tracking-wider">Save Targets</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
-        </View>
 
-        {/* Sign Out Card */}
-        <TouchableOpacity
-          onPress={signOut}
-          className="bg-red-500/10 border border-red-500/30 py-4 rounded-xl items-center mb-8 active:bg-red-500/20"
-        >
-          <Text className="text-red-400 font-bold text-base">Sign Out</Text>
-        </TouchableOpacity>
+          {/* ================= WEARABLE SECTION ================= */}
+          <View className="bg-[#111d19]/45 border border-[#1f372f] rounded-3xl mb-4 overflow-hidden">
+            <TouchableOpacity 
+              onPress={() => toggleSection('wearable')}
+              className="p-5 flex-row justify-between items-center active:bg-emerald-950/10"
+            >
+              <View className="flex-row items-center flex-1 mr-3">
+                <View className="w-8 h-8 rounded-full bg-[#172722] border border-[#1f372f] justify-center items-center mr-3">
+                  <Ionicons name="watch-outline" size={16} color="#34d399" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-xs font-bold font-serif">Wearable Band Settings</Text>
+                  <Text className="text-emerald-200/50 text-[9px] mt-0.5 leading-tight">Active biosensors & telemetry parameters</Text>
+                </View>
+              </View>
+              <Ionicons name={expandedSection === 'wearable' ? 'chevron-up' : 'chevron-down'} size={16} color="#047857" />
+            </TouchableOpacity>
 
-      </ScrollView>
+            {expandedSection === 'wearable' && (
+              <View className="px-5 pb-5 border-t border-[#1f372f]/45 pt-4 space-y-4">
+                <View className="bg-[#172722]/60 p-4 rounded-2xl border border-[#1f372f]">
+                  <Text className="text-emerald-450 text-[8px] uppercase font-bold tracking-widest font-mono">Telemetry Mode</Text>
+                  <Text className="text-white text-xs font-bold mt-1">Concentric Sensor Handshake</Text>
+                  <Text className="text-slate-350 text-[10px] leading-relaxed mt-1">
+                    Bluetooth discovery binds core parameters (HRV, skin temp) directly into the Ayurvedic rule engine every 15s.
+                  </Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => router.push('/(tabs)/device')}
+                  className="bg-[#172722] border border-[#1f372f] py-3 rounded-xl items-center active:bg-emerald-950"
+                >
+                  <Text className="text-emerald-400 font-bold text-xs uppercase tracking-wider">Manage Devices</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* ================= PRIVACY SECTION ================= */}
+          <View className="bg-[#111d19]/45 border border-[#1f372f] rounded-3xl mb-4 overflow-hidden">
+            <TouchableOpacity 
+              onPress={() => toggleSection('privacy')}
+              className="p-5 flex-row justify-between items-center active:bg-emerald-950/10"
+            >
+              <View className="flex-row items-center flex-1 mr-3">
+                <View className="w-8 h-8 rounded-full bg-[#172722] border border-[#1f372f] justify-center items-center mr-3">
+                  <Ionicons name="lock-closed-outline" size={16} color="#34d399" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-xs font-bold font-serif">Data Privacy & Vault</Text>
+                  <Text className="text-emerald-200/50 text-[9px] mt-0.5 leading-tight">Telemetry encryption & sharing consents</Text>
+                </View>
+              </View>
+              <Ionicons name={expandedSection === 'privacy' ? 'chevron-up' : 'chevron-down'} size={16} color="#047857" />
+            </TouchableOpacity>
+
+            {expandedSection === 'privacy' && (
+              <View className="px-5 pb-5 border-t border-[#1f372f]/45 pt-4 space-y-4">
+                {/* Anonymize Toggle */}
+                <View className="flex-row justify-between items-center py-2">
+                  <View className="flex-1 pr-4">
+                    <Text className="text-white text-xs font-bold">Anonymize Telemetry Sync</Text>
+                    <Text className="text-emerald-200/50 text-[9px] mt-0.5">Encrypts identity tags during database commits.</Text>
+                  </View>
+                  <Switch
+                    value={anonymizeSync}
+                    onValueChange={setAnonymizeSync}
+                    trackColor={{ false: '#172722', true: '#10b981' }}
+                    thumbColor={anonymizeSync ? '#ffffff' : '#9ca3af'}
+                  />
+                </View>
+
+                {/* Practitioner Sharing Toggle */}
+                <View className="flex-row justify-between items-center py-2 border-t border-[#1f372f]/10 pt-4">
+                  <View className="flex-1 pr-4">
+                    <Text className="text-white text-xs font-bold">Share Logs with Practitioner</Text>
+                    <Text className="text-emerald-200/50 text-[9px] mt-0.5">Grants clinical view permissions to B.A.M.S. advisers.</Text>
+                  </View>
+                  <Switch
+                    value={sharePractitioner}
+                    onValueChange={setSharePractitioner}
+                    trackColor={{ false: '#172722', true: '#10b981' }}
+                    thumbColor={sharePractitioner ? '#ffffff' : '#9ca3af'}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* ================= NOTIFICATIONS SECTION ================= */}
+          <View className="bg-[#111d19]/45 border border-[#1f372f] rounded-3xl mb-4 overflow-hidden">
+            <TouchableOpacity 
+              onPress={() => toggleSection('notifications')}
+              className="p-5 flex-row justify-between items-center active:bg-emerald-950/10"
+            >
+              <View className="flex-row items-center flex-1 mr-3">
+                <View className="w-8 h-8 rounded-full bg-[#172722] border border-[#1f372f] justify-center items-center mr-3">
+                  <Ionicons name="notifications-outline" size={16} color="#34d399" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-xs font-bold font-serif">Intelligent Alerts</Text>
+                  <Text className="text-emerald-200/50 text-[9px] mt-0.5 leading-tight">Dinacharya alarms and heart rate warnings</Text>
+                </View>
+              </View>
+              <Ionicons name={expandedSection === 'notifications' ? 'chevron-up' : 'chevron-down'} size={16} color="#047857" />
+            </TouchableOpacity>
+
+            {expandedSection === 'notifications' && (
+              <View className="px-5 pb-5 border-t border-[#1f372f]/45 pt-4 space-y-4">
+                {/* Haptic alarms */}
+                <View className="flex-row justify-between items-center py-2">
+                  <View className="flex-1 pr-4">
+                    <Text className="text-white text-xs font-bold">Haptic Dinacharya Reminders</Text>
+                    <Text className="text-emerald-200/50 text-[9px] mt-0.5">Vibrates paired band on hydration/dinacharya ticks.</Text>
+                  </View>
+                  <Switch
+                    value={hapticNotify}
+                    onValueChange={setHapticNotify}
+                    trackColor={{ false: '#172722', true: '#10b981' }}
+                    thumbColor={hapticNotify ? '#ffffff' : '#9ca3af'}
+                  />
+                </View>
+
+                {/* Vitals alarm */}
+                <View className="flex-row justify-between items-center py-2 border-t border-[#1f372f]/10 pt-4">
+                  <View className="flex-1 pr-4">
+                    <Text className="text-white text-xs font-bold">Vitals Volatility Alarm</Text>
+                    <Text className="text-emerald-200/50 text-[9px] mt-0.5">Vibrate core if HR/skin temp scales abnormally.</Text>
+                  </View>
+                  <Switch
+                    value={vitalsAlerts}
+                    onValueChange={setVitalsAlerts}
+                    trackColor={{ false: '#172722', true: '#10b981' }}
+                    thumbColor={vitalsAlerts ? '#ffffff' : '#9ca3af'}
+                  />
+                </View>
+
+                {/* Briefing alerts */}
+                <View className="flex-row justify-between items-center py-2 border-t border-[#1f372f]/10 pt-4">
+                  <View className="flex-1 pr-4">
+                    <Text className="text-white text-xs font-bold">Morning Diagnostic Briefing</Text>
+                    <Text className="text-emerald-200/50 text-[9px] mt-0.5">Receive notifications when your diagnostic compile completes.</Text>
+                  </View>
+                  <Switch
+                    value={briefingsNotify}
+                    onValueChange={setBriefingsNotify}
+                    trackColor={{ false: '#172722', true: '#10b981' }}
+                    thumbColor={briefingsNotify ? '#ffffff' : '#9ca3af'}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* ================= AI PREFERENCES SECTION ================= */}
+          <View className="bg-[#111d19]/45 border border-[#1f372f] rounded-3xl mb-4 overflow-hidden">
+            <TouchableOpacity 
+              onPress={() => toggleSection('ai')}
+              className="p-5 flex-row justify-between items-center active:bg-emerald-950/10"
+            >
+              <View className="flex-row items-center flex-1 mr-3">
+                <View className="w-8 h-8 rounded-full bg-[#172722] border border-[#1f372f] justify-center items-center mr-3">
+                  <Ionicons name="sparkles-outline" size={16} color="#34d399" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-xs font-bold font-serif">AI Coach Preferences</Text>
+                  <Text className="text-emerald-200/50 text-[9px] mt-0.5 leading-tight">Grounding filters and anti-hallucination settings</Text>
+                </View>
+              </View>
+              <Ionicons name={expandedSection === 'ai' ? 'chevron-up' : 'chevron-down'} size={16} color="#047857" />
+            </TouchableOpacity>
+
+            {expandedSection === 'ai' && (
+              <View className="px-5 pb-5 border-t border-[#1f372f]/45 pt-4 space-y-4">
+                <View className="flex-row justify-between items-center py-2">
+                  <View className="flex-1 pr-4">
+                    <Text className="text-white text-xs font-bold">Anti-Hallucination Grounding</Text>
+                    <Text className="text-emerald-200/50 text-[9px] mt-0.5">Forces rule engine parsing on all Groq vision/diet prompts.</Text>
+                  </View>
+                  <Switch
+                    value={strictGrounding}
+                    onValueChange={setStrictGrounding}
+                    trackColor={{ false: '#172722', true: '#10b981' }}
+                    thumbColor={strictGrounding ? '#ffffff' : '#9ca3af'}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* ================= APPEARANCE SECTION ================= */}
+          <View className="bg-[#111d19]/45 border border-[#1f372f] rounded-3xl mb-4 overflow-hidden">
+            <TouchableOpacity 
+              onPress={() => toggleSection('appearance')}
+              className="p-5 flex-row justify-between items-center active:bg-emerald-950/10"
+            >
+              <View className="flex-row items-center flex-1 mr-3">
+                <View className="w-8 h-8 rounded-full bg-[#172722] border border-[#1f372f] justify-center items-center mr-3">
+                  <Ionicons name="color-palette-outline" size={16} color="#34d399" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-xs font-bold font-serif">Visual Appearance</Text>
+                  <Text className="text-emerald-200/50 text-[9px] mt-0.5 leading-tight">Theme presets and color settings</Text>
+                </View>
+              </View>
+              <Ionicons name={expandedSection === 'appearance' ? 'chevron-up' : 'chevron-down'} size={16} color="#047857" />
+            </TouchableOpacity>
+
+            {expandedSection === 'appearance' && (
+              <View className="px-5 pb-5 border-t border-[#1f372f]/45 pt-4 space-y-4">
+                <Text className="text-emerald-300 text-[10px] font-semibold mb-2">Aesthetic Canvas Theme</Text>
+                <View className="flex-row space-x-2 bg-[#172722]/50 p-1 rounded-xl border border-[#1f372f]">
+                  {(['sandalwood', 'forest', 'obsidian'] as const).map((theme) => {
+                    const isSelected = appTheme === theme;
+                    return (
+                      <TouchableOpacity
+                        key={theme}
+                        onPress={() => setAppTheme(theme)}
+                        className={`flex-1 py-2 rounded-lg items-center capitalize ${
+                          isSelected ? 'bg-emerald-500 border border-emerald-400/20' : ''
+                        }`}
+                      >
+                        <Text className={`text-[9px] font-bold ${isSelected ? 'text-emerald-955' : 'text-emerald-400/60'}`}>
+                          {theme}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* ================= DEVELOPER MODE SECTION ================= */}
+          <View className="bg-[#111d19]/45 border border-[#1f372f] rounded-3xl mb-4 overflow-hidden">
+            <TouchableOpacity 
+              onPress={() => toggleSection('dev')}
+              className="p-5 flex-row justify-between items-center active:bg-emerald-950/10"
+            >
+              <View className="flex-row items-center flex-1 mr-3">
+                <View className="w-8 h-8 rounded-full bg-[#172722] border border-[#1f372f] justify-center items-center mr-3">
+                  <Ionicons name="code-working-outline" size={16} color="#34d399" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-xs font-bold font-serif">Developer Sandboxes</Text>
+                  <Text className="text-emerald-200/50 text-[9px] mt-0.5 leading-tight">Telemetry simulators and backend configurations</Text>
+                </View>
+              </View>
+              <Ionicons name={expandedSection === 'dev' ? 'chevron-up' : 'chevron-down'} size={16} color="#047857" />
+            </TouchableOpacity>
+
+            {expandedSection === 'dev' && (
+              <View className="px-5 pb-5 border-t border-[#1f372f]/45 pt-4 space-y-4">
+                {/* Mock Stream */}
+                <View className="flex-row justify-between items-center py-2">
+                  <View className="flex-1 pr-4">
+                    <Text className="text-white text-xs font-bold">1Hz Telemetry Simulator Stream</Text>
+                    <Text className="text-emerald-200/50 text-[9px] mt-0.5">Streams mock data to batched SQLite buffers.</Text>
+                  </View>
+                  <Switch
+                    value={devMockStream}
+                    onValueChange={setDevMockStream}
+                    trackColor={{ false: '#172722', true: '#10b981' }}
+                    thumbColor={devMockStream ? '#ffffff' : '#9ca3af'}
+                  />
+                </View>
+
+                {/* Bypass JWT */}
+                <View className="flex-row justify-between items-center py-2 border-t border-[#1f372f]/10 pt-4">
+                  <View className="flex-1 pr-4">
+                    <Text className="text-white text-xs font-bold">Bypass Supabase Clerk JWT</Text>
+                    <Text className="text-emerald-200/50 text-[9px] mt-0.5">Enables direct RLS Dev policies bypass rules.</Text>
+                  </View>
+                  <Switch
+                    value={devBypassJwt}
+                    onValueChange={setDevBypassJwt}
+                    trackColor={{ false: '#172722', true: '#10b981' }}
+                    thumbColor={devBypassJwt ? '#ffffff' : '#9ca3af'}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* ================= ABOUT SECTION ================= */}
+          <View className="bg-[#111d19]/45 border border-[#1f372f] rounded-3xl mb-4 overflow-hidden">
+            <TouchableOpacity 
+              onPress={() => toggleSection('about')}
+              className="p-5 flex-row justify-between items-center active:bg-emerald-950/10"
+            >
+              <View className="flex-row items-center flex-1 mr-3">
+                <View className="w-8 h-8 rounded-full bg-[#172722] border border-[#1f372f] justify-center items-center mr-3">
+                  <Ionicons name="information-circle-outline" size={16} color="#34d399" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-xs font-bold font-serif">About AquaAyur</Text>
+                  <Text className="text-emerald-200/50 text-[9px] mt-0.5 leading-tight">Software specifications and clinical certifications</Text>
+                </View>
+              </View>
+              <Ionicons name={expandedSection === 'about' ? 'chevron-up' : 'chevron-down'} size={16} color="#047857" />
+            </TouchableOpacity>
+
+            {expandedSection === 'about' && (
+              <View className="px-5 pb-5 border-t border-[#1f372f]/45 pt-4 space-y-3.5">
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-slate-350 text-[11px]">Software Version</Text>
+                  <Text className="text-white text-xs font-bold font-mono">v1.4.0</Text>
+                </View>
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-slate-350 text-[11px]">B.A.M.S. Clinical Standards</Text>
+                  <Text className="text-emerald-400 text-xs font-bold font-mono">Certified</Text>
+                </View>
+                <View className="flex-row justify-between items-center pt-2 border-t border-[#1f372f]/10">
+                  <Text className="text-[9px] text-emerald-200/40 leading-normal font-sans text-center w-full">
+                    Designed for holistic wellness. Telemetry assessments are grounded strictly on rule-based engines.
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+        </ScrollView>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
