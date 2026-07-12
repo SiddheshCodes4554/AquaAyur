@@ -28,5 +28,14 @@ ALTER TABLE public.dinacharya_recommendations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dinacharya_completions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sensor_streams DISABLE ROW LEVEL SECURITY;
 
+-- 12. STORAGE OBJECTS RLS BYPASS
+-- Creates a permissive wildcard policy allowing all reads/writes in development
+-- (bypasses owner restriction issues).
+drop policy if exists "Wildcard storage objects access" on storage.objects;
+create policy "Wildcard storage objects access"
+  on storage.objects for all
+  using (true)
+  with check (true);
+
 -- Output confirmation
-SELECT 'RLS successfully disabled for all telemetry and diagnostic tables. Your mobile app can now sync data.' as status;
+SELECT 'RLS successfully disabled for all telemetry, diagnostic, and storage tables. Your mobile app can now sync data.' as status;

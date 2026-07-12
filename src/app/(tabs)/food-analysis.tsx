@@ -285,7 +285,12 @@ export default function FoodAnalysisScreen() {
       let uploadedUrl: string | null = null;
       if (imageBase64) {
         setUploadingImage(true);
-        uploadedUrl = await uploadMealImage(imageBase64, user.id);
+        try {
+          uploadedUrl = await uploadMealImage(imageBase64, user.id);
+        } catch (uploadError) {
+          console.warn('[FoodAnalysis] Image upload failed (proceeding without image):', uploadError);
+          uploadedUrl = null;
+        }
         setUploadingImage(false);
       }
 
