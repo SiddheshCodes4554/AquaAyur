@@ -305,7 +305,7 @@ export default function DashboardScreen() {
             ) : (
               <View className="flex-row justify-between items-center py-1">
                 <Text className="text-slate-300 text-xs flex-1 mr-3 leading-relaxed">
-                  No active wearable hardware paired. Tap here to pair your sensor band or start the virtual developer simulator.
+                  No active wearable hardware paired. Tap here to pair your sensor band.
                 </Text>
                 <Ionicons name="chevron-forward" size={16} color="#34d399" />
               </View>

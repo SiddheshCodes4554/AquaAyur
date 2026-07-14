@@ -123,12 +123,6 @@ export default function TabsLayout() {
           href: null,
         }}
       />
-      <Tabs.Screen
-        name="simulator"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }

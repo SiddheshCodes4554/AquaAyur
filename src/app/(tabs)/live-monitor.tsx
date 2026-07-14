@@ -81,7 +81,7 @@ export default function LiveMonitorScreen() {
               <Ionicons name="pulse" size={48} color="#047857" className="mb-4" />
               <Text className="text-emerald-400 text-base font-serif font-black">Awaiting Hardware Sync</Text>
               <Text className="text-slate-300 text-xs mt-2 text-center px-8 leading-relaxed">
-                Connect your physical AquaAyur smartband or toggle Developer Simulator mode inside the Settings hub to start streaming biometrics.
+                Connect your physical AquaAyur smartband inside the device settings page to start streaming biometrics.
               </Text>
               <TouchableOpacity
                 onPress={() => router.push('/(tabs)/device')}

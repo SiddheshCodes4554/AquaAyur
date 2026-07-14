@@ -53,8 +53,6 @@ export default function SettingsScreen() {
   const [anonymizeSync, setAnonymizeSync] = useState(false);
   const [sharePractitioner, setSharePractitioner] = useState(true);
   const [strictGrounding, setStrictGrounding] = useState(true);
-  const [devMockStream, setDevMockStream] = useState(true);
-  const [devBypassJwt, setDevBypassJwt] = useState(false);
   const [appTheme, setAppTheme] = useState<'sandalwood' | 'forest' | 'obsidian'>('sandalwood');
 
   const [loading, setLoading] = useState(false);
@@ -477,56 +475,6 @@ export default function SettingsScreen() {
             )}
           </View>
 
-          {/* ================= DEVELOPER MODE SECTION ================= */}
-          <View className="bg-[#111d19]/45 border border-[#1f372f] rounded-3xl mb-4 overflow-hidden">
-            <TouchableOpacity 
-              onPress={() => toggleSection('dev')}
-              className="p-5 flex-row justify-between items-center active:bg-emerald-950/10"
-            >
-              <View className="flex-row items-center flex-1 mr-3">
-                <View className="w-8 h-8 rounded-full bg-[#172722] border border-[#1f372f] justify-center items-center mr-3">
-                  <Ionicons name="code-working-outline" size={16} color="#34d399" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-white text-xs font-bold font-serif">Developer Sandboxes</Text>
-                  <Text className="text-emerald-200/50 text-[9px] mt-0.5 leading-tight">Telemetry simulators and backend configurations</Text>
-                </View>
-              </View>
-              <Ionicons name={expandedSection === 'dev' ? 'chevron-up' : 'chevron-down'} size={16} color="#047857" />
-            </TouchableOpacity>
-
-            {expandedSection === 'dev' && (
-              <View className="px-5 pb-5 border-t border-[#1f372f]/45 pt-4 space-y-4">
-                {/* Mock Stream */}
-                <View className="flex-row justify-between items-center py-2">
-                  <View className="flex-1 pr-4">
-                    <Text className="text-white text-xs font-bold">1Hz Telemetry Simulator Stream</Text>
-                    <Text className="text-emerald-200/50 text-[9px] mt-0.5">Streams mock data to batched SQLite buffers.</Text>
-                  </View>
-                  <Switch
-                    value={devMockStream}
-                    onValueChange={setDevMockStream}
-                    trackColor={{ false: '#172722', true: '#10b981' }}
-                    thumbColor={devMockStream ? '#ffffff' : '#9ca3af'}
-                  />
-                </View>
-
-                {/* Bypass JWT */}
-                <View className="flex-row justify-between items-center py-2 border-t border-[#1f372f]/10 pt-4">
-                  <View className="flex-1 pr-4">
-                    <Text className="text-white text-xs font-bold">Bypass Supabase Clerk JWT</Text>
-                    <Text className="text-emerald-200/50 text-[9px] mt-0.5">Enables direct RLS Dev policies bypass rules.</Text>
-                  </View>
-                  <Switch
-                    value={devBypassJwt}
-                    onValueChange={setDevBypassJwt}
-                    trackColor={{ false: '#172722', true: '#10b981' }}
-                    thumbColor={devBypassJwt ? '#ffffff' : '#9ca3af'}
-                  />
-                </View>
-              </View>
-            )}
-          </View>
 
           {/* ================= ABOUT SECTION ================= */}
           <View className="bg-[#111d19]/45 border border-[#1f372f] rounded-3xl mb-4 overflow-hidden">

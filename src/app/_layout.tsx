@@ -44,8 +44,8 @@ function InitialLayout() {
   useEffect(() => {
     initDatabase().catch(err => console.error('[RootLayout] Local database init failed:', err));
     
-    const { loadSavedSensorMode } = require('../services/sensorManager');
-    loadSavedSensorMode().catch((err: any) => console.log('[SensorManager] Startup mode load failed:', err));
+    const { autoConnectLastPairedDevice } = require('../services/bleManager');
+    autoConnectLastPairedDevice().catch((err: any) => console.log('[BLE] Startup autoconnect failed:', err));
   }, []);
 
   // 2. Sync Clerk auth state to Zustand store & Supabase
@@ -112,8 +112,8 @@ function InitialLayout() {
         router.replace('/(auth)/onboarding');
       } else {
         router.replace('/(tabs)');
-        const { loadSavedSensorMode } = require('../services/sensorManager');
-        loadSavedSensorMode().catch((err: any) => console.log('[SensorManager] Login mode load failed:', err));
+        const { autoConnectLastPairedDevice } = require('../services/bleManager');
+        autoConnectLastPairedDevice().catch((err: any) => console.log('[BLE] Login autoconnect failed:', err));
       }
     }, 100);
 

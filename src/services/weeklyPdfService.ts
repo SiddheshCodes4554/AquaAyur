@@ -40,7 +40,7 @@ export async function generateWeeklyReportPdf(userId: string): Promise<WeeklyPdf
     }
   } catch (err) {
     console.warn('[WeeklyPdf] Compile fail: ', err);
-    // Construct mock fallback weekly report if DB fails
+    // Construct static fallback weekly report if DB fails
     weeklyReport = {
       health_score: 78,
       wellness_score: 82,

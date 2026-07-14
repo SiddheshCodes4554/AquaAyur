@@ -1,6 +1,7 @@
 import { BleManager, Device, Subscription, BleErrorCode } from 'react-native-ble-plx';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { useBLEStore } from '../store/useBLEStore';
+import { useSensorStore, SensorData, SensorStatus } from '../store/useSensorStore';
 import { LiveBiometrics, OfflineTelemetry } from '../types';
 import { insertLocalTelemetry, batchInsertLocalTelemetry } from './database';
 import { triggerSync } from './syncManager';
@@ -10,6 +11,36 @@ import { validateBiometrics } from '../utils/validation';
 import Constants from 'expo-constants';
 
 const isExpoGo = Constants?.executionEnvironment === 'storeClient';
+
+function updateStatus(status: SensorStatus) {
+  useBLEStore.getState().setStatus(status as any);
+  useSensorStore.getState().setStatus(status);
+}
+
+function updateError(msg: string | null) {
+  useBLEStore.getState().setError(msg);
+  useSensorStore.getState().setError(msg);
+}
+
+function updateLiveData(biometrics: LiveBiometrics | null) {
+  useBLEStore.getState().setLiveData(biometrics as any);
+  if (biometrics) {
+    const unifiedData: SensorData = {
+      heartRate: biometrics.heartRate,
+      temperature: biometrics.temperature,
+      steps: biometrics.steps,
+      activity: biometrics.activity,
+      sleep: 80,
+      stress: 25,
+      hydration: 75,
+      battery: 85,
+      timestamp: biometrics.timestamp.toISOString()
+    };
+    useSensorStore.getState().setLiveData(unifiedData);
+  } else {
+    useSensorStore.getState().setLiveData(null);
+  }
+}
 
 
 // Service & Characteristic UUIDs matching the BLE specification
@@ -72,8 +103,8 @@ function stopTelemetryFlushTimer() {
  */
 export function getBleManager(): BleManager | null {
   if (isExpoGo) {
-    useBLEStore.getState().setError('Bluetooth is not supported in Expo Go. Please run the development build (npx expo run:android) on a physical device.');
-    useBLEStore.getState().setStatus('error');
+    updateError('Bluetooth is not supported in Expo Go. Please run the development build (npx expo run:android) on a physical device.');
+    updateStatus('error');
     return null;
   }
   if (!managerInstance) {
@@ -81,8 +112,8 @@ export function getBleManager(): BleManager | null {
       managerInstance = new BleManager();
     } catch (e) {
       console.error('[BLE] Failed to initialize native BleManager:', e);
-      useBLEStore.getState().setError('Failed to initialize Bluetooth. Make sure native modules are built.');
-      useBLEStore.getState().setStatus('error');
+      updateError('Failed to initialize Bluetooth. Make sure native modules are built.');
+      updateStatus('error');
       managerInstance = null;
     }
   }
@@ -196,8 +227,8 @@ export async function startScanning(): Promise<void> {
 
   const hasPermissions = await requestBLEPermissions();
   if (!hasPermissions) {
-    useBLEStore.getState().setError('Bluetooth/Location permissions are denied.');
-    useBLEStore.getState().setStatus('error');
+    updateError('Bluetooth/Location permissions are denied.');
+    updateStatus('error');
     return;
   }
 
@@ -206,8 +237,8 @@ export async function startScanning(): Promise<void> {
     const state = await manager.state();
     if (state !== 'PoweredOn') {
       const stateLabel = state === 'PoweredOff' ? 'powered off' : state.toLowerCase();
-      useBLEStore.getState().setError(`Bluetooth is ${stateLabel}. Please enable Bluetooth to scan.`);
-      useBLEStore.getState().setStatus('error');
+      updateError(`Bluetooth is ${stateLabel}. Please enable Bluetooth to scan.`);
+      updateStatus('error');
       return;
     }
   } catch (stateErr) {
@@ -223,16 +254,16 @@ export async function startScanning(): Promise<void> {
     isAutoconnecting = false; // Reset autoconnect guard since manual scan overrides it
   }
 
-  useBLEStore.getState().setError(null);
-  useBLEStore.getState().setStatus('scanning');
+  updateError(null);
+  updateStatus('scanning');
   useBLEStore.getState().clearScannedDevices();
   isScanningActive = true;
 
   manager.startDeviceScan(null, null, (error, device) => {
     if (error) {
       console.error('[BLE] Scan error:', error);
-      useBLEStore.getState().setError(`Scan failed: ${error.message}`);
-      useBLEStore.getState().setStatus('error');
+      updateError(`Scan failed: ${error.message}`);
+      updateStatus('error');
       try {
         manager.stopDeviceScan();
       } catch (e) {}
@@ -266,7 +297,7 @@ export function stopScanning(): void {
   }
   isScanningActive = false;
   if (useBLEStore.getState().status === 'scanning') {
-    useBLEStore.getState().setStatus('idle');
+    updateStatus('idle');
   }
 }
 
@@ -281,8 +312,8 @@ export async function connectToDevice(device: Device): Promise<void> {
   }
 
   stopScanning();
-  useBLEStore.getState().setStatus('connecting');
-  useBLEStore.getState().setError(null);
+  updateStatus('connecting');
+  updateError(null);
   autoReconnectEnabled = true;
 
   try {
@@ -325,7 +356,7 @@ export async function connectToDevice(device: Device): Promise<void> {
     }
 
     useBLEStore.getState().setConnectedDevice(connectedDevice);
-    useBLEStore.getState().setStatus('connected');
+    updateStatus('connected');
 
     // Persist pairing in database
     savePairingToDatabase(device.id, device.name || 'AquaAyur Wearable')
@@ -335,17 +366,17 @@ export async function connectToDevice(device: Device): Promise<void> {
     device.onDisconnected((err, disconnectedDevice) => {
       console.log('[BLE] Device disconnected.');
       useBLEStore.getState().setConnectedDevice(null);
-      useBLEStore.getState().setLiveData(null as any);
+      updateLiveData(null);
       
       // Flush leftover buffer and stop timer
       flushTelemetryBuffer().catch(e => console.error('[BLE] Error flushing buffer on disconnect:', e));
       stopTelemetryFlushTimer();
       
       if (autoReconnectEnabled) {
-        useBLEStore.getState().setStatus('connecting');
+        updateStatus('connecting');
         handleReconnection(device);
       } else {
-        useBLEStore.getState().setStatus('idle');
+        updateStatus('idle');
       }
     });
 
@@ -354,8 +385,8 @@ export async function connectToDevice(device: Device): Promise<void> {
 
   } catch (error: any) {
     console.error('[BLE] Connection failed:', error);
-    useBLEStore.getState().setError(`Connection failed: ${error.message}`);
-    useBLEStore.getState().setStatus('error');
+    updateError(`Connection failed: ${error.message}`);
+    updateStatus('error');
   }
 }
 
@@ -377,7 +408,7 @@ export async function disconnectDevice(): Promise<void> {
 
   const device = useBLEStore.getState().connectedDevice;
   if (device) {
-    useBLEStore.getState().setStatus('disconnecting');
+    updateStatus('disconnecting');
     try {
       await device.cancelConnection();
       console.log('[BLE] Clean disconnect complete.');
@@ -389,6 +420,9 @@ export async function disconnectDevice(): Promise<void> {
   }
 
   useBLEStore.getState().resetBLEStore();
+  useSensorStore.getState().setStatus('idle');
+  useSensorStore.getState().setLiveData(null);
+  useSensorStore.getState().setError(null);
 }
 
 /**
@@ -437,8 +471,8 @@ async function startStreamingData(device: Device): Promise<void> {
           return;
         }
         console.error('[BLE] Streaming characteristic monitoring error:', error);
-        useBLEStore.getState().setError('Target BLE Service or Characteristic not found. Check console logs for details.');
-        useBLEStore.getState().setStatus('error');
+        updateError('Target BLE Service or Characteristic not found. Check console logs for details.');
+        updateStatus('error');
         return;
       }
 
@@ -486,7 +520,7 @@ async function startStreamingData(device: Device): Promise<void> {
           };
 
           // 5. Update Zustand Store for real-time dashboard UI
-          useBLEStore.getState().setLiveData(biometrics);
+          updateLiveData(biometrics);
 
           // 6. Push to local memory buffer instead of writing directly to SQLite
           telemetryBuffer.push({
@@ -683,7 +717,7 @@ export async function autoConnectLastPairedDevice(): Promise<void> {
       isScanningActive = false;
     }
 
-    useBLEStore.getState().setStatus('connecting');
+    updateStatus('connecting');
     isScanningActive = true;
 
     // Run custom target scan
@@ -719,7 +753,7 @@ export async function autoConnectLastPairedDevice(): Promise<void> {
         isAutoconnecting = false;
       }
       if (useBLEStore.getState().status === 'connecting' && !useBLEStore.getState().connectedDevice) {
-        useBLEStore.getState().setStatus('idle');
+        updateStatus('idle');
       }
     }, 20000);
 

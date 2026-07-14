@@ -26,11 +26,10 @@ import {
   autoConnectLastPairedDevice, 
   SERVICE_UUID 
 } from '../../services/bleManager';
-import { switchSensorMode } from '../../services/sensorManager';
 
 export default function DeviceScreen() {
   const { scannedDevices, connectedDevice, errorMsg } = useBLEStore();
-  const { status, dataSource, liveData } = useSensorStore();
+  const { status, liveData } = useSensorStore();
   const [showOtherDevices, setShowOtherDevices] = useState(false);
   const [pairedDevice, setPairedDevice] = useState<{ mac_address: string, device_name: string } | null>(null);
   const [loadingPairing, setLoadingPairing] = useState(false);
@@ -131,11 +130,19 @@ export default function DeviceScreen() {
     }
   };
 
+  // Auto-scan on mount if disconnected
   useEffect(() => {
-    if (dataSource === 'physical') {
-      fetchPairedDevice();
+    if (status !== 'connected') {
+      startScanning().catch(err => console.error('[Device] Auto-scan on mount failed:', err));
     }
-  }, [connectedDevice, dataSource]);
+    return () => {
+      stopScanning();
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchPairedDevice();
+  }, [connectedDevice]);
 
   const isRecommended = (device: any) => {
     if (!device) return false;
@@ -198,33 +205,6 @@ export default function DeviceScreen() {
             </View>
           )}
 
-          {/* TELEMETRY DATA SOURCE toggle */}
-          <View className="bg-[#111d19]/45 border border-[#1f372f] p-5 rounded-3xl mb-6">
-            <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-widest font-mono mb-3">Telemetry Data Source</Text>
-            <View className="flex-row space-x-2 bg-[#172722]/50 p-1 rounded-xl border border-[#1f372f]">
-              <TouchableOpacity
-                onPress={() => switchSensorMode('physical')}
-                className={`flex-1 py-2.5 rounded-lg items-center ${
-                  dataSource === 'physical' ? 'bg-emerald-500 border border-emerald-400/20' : ''
-                }`}
-              >
-                <Text className={`text-[10px] font-black uppercase tracking-wider ${dataSource === 'physical' ? 'text-emerald-955' : 'text-emerald-400/60'}`}>
-                  Physical Band
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                onPress={() => switchSensorMode('simulator')}
-                className={`flex-1 py-2.5 rounded-lg items-center ${
-                  dataSource === 'simulator' ? 'bg-emerald-500 border border-emerald-400/20' : ''
-                }`}
-              >
-                <Text className={`text-[10px] font-black uppercase tracking-wider ${dataSource === 'simulator' ? 'text-emerald-955' : 'text-emerald-400/60'}`}>
-                  Simulator Mode
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
 
           {/* APPLE WATCH STYLE BLE PAIRING HUB CONTAINER */}
           <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl mb-6 items-center relative overflow-hidden">
@@ -269,7 +249,7 @@ export default function DeviceScreen() {
               {/* Central Core Emblem */}
               <View className="w-18 h-18 rounded-full bg-[#172722] border border-[#1f372f] justify-center items-center shadow-xl shadow-black/45 z-10">
                 <Ionicons 
-                  name={dataSource === 'simulator' ? "hardware-chip" : "bluetooth"} 
+                  name="bluetooth" 
                   size={26} 
                   color={status === 'connected' ? '#34d399' : '#047857'} 
                 />
@@ -311,10 +291,10 @@ export default function DeviceScreen() {
                 <View className="flex-row justify-between items-center pt-2 border-t border-[#1f372f]/10">
                   <View>
                     <Text className="text-white text-[11px] font-bold">
-                      {dataSource === 'simulator' ? 'Virtual AyurWearable' : (connectedDevice?.name || 'AquaAyur Band-V1')}
+                      {connectedDevice?.name || 'AquaAyur Band-V1'}
                     </Text>
                     <Text className="text-emerald-400/40 text-[9px] font-mono mt-0.5">
-                      Firmware: v1.4.2 | MAC: {dataSource === 'simulator' ? '00:1A:7D:DA:71:11' : (connectedDevice?.id || 'ESP32-Aqua-AYUR')}
+                      Firmware: v1.4.2 | MAC: {connectedDevice?.id || 'ESP32-Aqua-AYUR'}
                     </Text>
                   </View>
                   <View className="bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded">
@@ -347,53 +327,30 @@ export default function DeviceScreen() {
 
             {/* Actions Panel */}
             <View className="w-full">
-              {dataSource === 'simulator' ? (
-                <View className="space-y-2.5 w-full">
-                  <TouchableOpacity
-                    onPress={() => router.push('/(tabs)/simulator')}
-                    className="bg-emerald-500 rounded-2xl py-3.5 w-full flex-row justify-center items-center shadow shadow-emerald-500/20 active:bg-emerald-600"
-                  >
-                    <Ionicons name="options-outline" size={15} color="#022c22" style={{ marginRight: 6 }} />
-                    <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">Configure Telemetry</Text>
-                  </TouchableOpacity>
-
-                  {status === 'connected' && (
-                    <TouchableOpacity
-                      onPress={disconnectDevice}
-                      className="bg-red-500/15 border border-red-500/35 rounded-2xl py-3 items-center active:bg-red-500/25"
-                    >
-                      <Text className="text-red-400 font-bold text-xs">Disconnect Simulator</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
+              {status === 'connected' ? (
+                <TouchableOpacity
+                  onPress={disconnectDevice}
+                  className="bg-red-500/15 border border-red-500/35 rounded-2xl py-3.5 items-center active:bg-red-500/25 w-full"
+                >
+                  <Text className="text-red-400 font-black text-xs uppercase tracking-wider">Disconnect Bluetooth</Text>
+                </TouchableOpacity>
               ) : (
-                <View className="w-full">
-                  {status === 'connected' ? (
-                    <TouchableOpacity
-                      onPress={disconnectDevice}
-                      className="bg-red-500/15 border border-red-500/35 rounded-2xl py-3.5 items-center active:bg-red-500/25 w-full"
-                    >
-                      <Text className="text-red-400 font-black text-xs uppercase tracking-wider">Disconnect Bluetooth</Text>
-                    </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleScanToggle}
+                  className="bg-emerald-500 rounded-2xl py-3.5 w-full flex-row justify-center items-center shadow shadow-emerald-500/20 active:bg-emerald-600"
+                >
+                  {status === 'scanning' ? (
+                    <>
+                      <ActivityIndicator size="small" color="#022c22" className="mr-2" />
+                      <Text className="text-emerald-955 font-black text-xs uppercase tracking-wider">Stop Scanning</Text>
+                    </>
                   ) : (
-                    <TouchableOpacity
-                      onPress={handleScanToggle}
-                      className="bg-emerald-500 rounded-2xl py-3.5 w-full flex-row justify-center items-center shadow shadow-emerald-500/20 active:bg-emerald-600"
-                    >
-                      {status === 'scanning' ? (
-                        <>
-                          <ActivityIndicator size="small" color="#022c22" className="mr-2" />
-                          <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">Stop Scanning</Text>
-                        </>
-                      ) : (
-                        <>
-                          <Ionicons name="search" size={14} color="#022c22" style={{ marginRight: 6 }} />
-                          <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">Scan for Sensors</Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
+                    <>
+                      <Ionicons name="search" size={14} color="#022c22" style={{ marginRight: 6 }} />
+                      <Text className="text-emerald-955 font-black text-xs uppercase tracking-wider">Scan for Sensors</Text>
+                    </>
                   )}
-                </View>
+                </TouchableOpacity>
               )}
             </View>
 
@@ -461,7 +418,7 @@ export default function DeviceScreen() {
           )}
 
           {/* DIAGNOSTIC COMMAND BOARD FOR ESP32 ACTUATORS */}
-          {status === 'connected' && dataSource === 'physical' && (
+          {status === 'connected' && (
             <View className="bg-[#111d19]/45 border border-[#1f372f] p-5 rounded-3xl mb-6">
               <View className="flex-row items-center mb-3">
                 <Ionicons name="build-outline" size={16} color="#34d399" />
@@ -475,13 +432,13 @@ export default function DeviceScreen() {
                 className="bg-emerald-500 rounded-2xl py-3 w-full flex-row justify-center items-center active:bg-emerald-600"
               >
                 <Ionicons name="pulse" size={15} color="#022c22" style={{ marginRight: 6 }} />
-                <Text className="text-emerald-950 font-bold text-xs uppercase tracking-wider">Trigger Haptic Test</Text>
+                <Text className="text-emerald-955 font-bold text-xs uppercase tracking-wider">Trigger Haptic Test</Text>
               </TouchableOpacity>
             </View>
           )}
 
           {/* PHYSICAL PAIRINGS SEARCH LIST (WHEN DISCONNECTED) */}
-          {dataSource === 'physical' && !connectedDevice && (
+          {!connectedDevice && (
             <View className="space-y-6">
               {pairedDevice && (
                 <View className="mb-2">

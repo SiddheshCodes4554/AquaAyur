@@ -17,12 +17,11 @@ import { calculateDailyAgni } from '../../services/agniEngine';
 import { calculateDailyOjas } from '../../services/ojasEngine';
 import AyurExplanationSheet from '../../components/AyurExplanationSheet';
 import { getExplanationForRecommendation, ExplanationContext } from '../../services/recommendationExplainer';
-import { runLifestyleSimulation, SimulatedHabits } from '../../services/lifestyleSimEngine';
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-type TwinTab = 'balance' | 'doshas' | 'indices' | 'simulate';
+type TwinTab = 'balance' | 'doshas' | 'indices';
 
 export default function DigitalTwinScreen() {
   const { user } = useAuthStore();
@@ -35,7 +34,6 @@ export default function DigitalTwinScreen() {
   const ojasHistory = useOjasStore(state => state.history);
   const liveData = useSensorStore(state => state.liveData);
   const [activeTab, setActiveTab] = useState<TwinTab>('balance');
-  const [simulating, setSimulating] = useState(false);
   const [explanationVisible, setExplanationVisible] = useState(false);
   const [explanationContext, setExplanationContext] = useState<ExplanationContext | null>(null);
 
@@ -343,58 +341,6 @@ export default function DigitalTwinScreen() {
     };
   }, [vata, pitta, kapha]);
 
-  // Simulator helper: inserts raw data & triggers recalculations
-  const handleSimulateTelemetry = async () => {
-    if (!user?.id) return;
-    setSimulating(true);
-    try {
-      const todayStr = new Date().toISOString().split('T')[0];
-      const isOverheating = Math.random() > 0.5;
-      
-      const simulatedHR = isOverheating ? 98 : 58; // High vs low heart rates
-      const simulatedTemp = isOverheating ? 37.8 : 35.9; // Feverish vs cool body temps
-      
-      console.log(`[Simulator] Injecting HR: ${simulatedHR} bpm, Temp: ${simulatedTemp}°C`);
-
-      // Write logs to Supabase
-      const timestamp = new Date().toISOString();
-      const [hrRes, tempRes] = await Promise.all([
-        supabase.from('heart_rate_logs').insert({ user_id: user.id, timestamp, bpm: simulatedHR }),
-        supabase.from('temperature_logs').insert({ user_id: user.id, timestamp, temperature_celsius: simulatedTemp })
-      ]);
-
-      if (hrRes.error) throw hrRes.error;
-      if (tempRes.error) throw tempRes.error;
-
-      // Force recalculation of daily dosha, agni, and ojas engines
-      await Promise.all([
-        calculateDailyDosha(user.id, todayStr),
-        calculateDailyAgni(user.id, todayStr),
-        calculateDailyOjas(user.id, todayStr)
-      ]);
-
-      // State is refreshed in background via the database realtime listeners, but we call fetch just in case
-      await Promise.all([
-        fetchTwinState(user.id),
-        useDoshaStore.getState().fetchCurrentState(user.id),
-        useDoshaStore.getState().fetchHistory(user.id, 7),
-        useAgniStore.getState().fetchTodayAgni(user.id),
-        useAgniStore.getState().fetchHistory(user.id)
-      ]);
-
-      if (Platform.OS !== 'web') {
-        Alert.alert(
-          'Biometrics Synced',
-          `Wearable data updated!\nHeart Rate: ${simulatedHR} bpm\nTemp: ${simulatedTemp}°C\nDigital Twin is morphing to represent the new state.`
-        );
-      }
-    } catch (e: any) {
-      console.error('[Simulator] Failed:', e);
-      Alert.alert('Simulation Error', e.message || 'Failed to simulate wearable stream.');
-    } finally {
-      setSimulating(false);
-    }
-  };
 
   const getDominantDoshaText = () => {
     const max = Math.max(vata, pitta, kapha);
@@ -544,12 +490,11 @@ export default function DigitalTwinScreen() {
 
           {/* Quick Selector Tabs */}
           <View className="flex-row bg-emerald-950/40 p-1 rounded-xl border border-emerald-900/25 mb-5">
-            {(['balance', 'doshas', 'indices', 'simulate'] as TwinTab[]).map(tab => {
+            {(['balance', 'doshas', 'indices'] as TwinTab[]).map(tab => {
               const isSelected = activeTab === tab;
               let label = 'Overview';
               if (tab === 'doshas') label = 'Bio-Doshas';
               if (tab === 'indices') label = 'Agni & Ojas';
-              if (tab === 'simulate') label = 'Sim Lab';
 
               return (
                 <TouchableOpacity
@@ -979,45 +924,7 @@ export default function DigitalTwinScreen() {
             </View>
           )}
 
-          {/* TAB CONTENT 4: SIMULATION LAB */}
-          {activeTab === 'simulate' && (
-            <LifestyleSimulationLab 
-              baseVata={vata}
-              basePitta={pitta}
-              baseKapha={kapha}
-              baseAgni={agni}
-              baseOjas={ojas}
-            />
-          )}
 
-          {/* TELEMETRY SIMULATOR PANEL */}
-          <View className="mt-8 bg-emerald-950/25 border border-dashed border-emerald-900/30 p-5 rounded-2xl">
-            <View className="flex-row justify-between items-center mb-2.5">
-              <View className="flex-1 pr-2">
-                <Text className="text-emerald-400 text-xs font-bold uppercase tracking-wider">Biometric Stream Simulator</Text>
-                <Text className="text-emerald-500/50 text-[10px] mt-0.5">Simulate live BLE smart ring sync events to morph the Twin.</Text>
-              </View>
-              <Ionicons name="hardware-chip-outline" size={18} color="#10b981" />
-            </View>
-            
-            <TouchableOpacity
-              onPress={handleSimulateTelemetry}
-              disabled={simulating}
-              className="bg-emerald-500 py-3 rounded-xl flex-row justify-center items-center active:bg-emerald-600 shadow-md shadow-emerald-500/10"
-            >
-              {simulating ? (
-                <>
-                  <ActivityIndicator size="small" color="#022c22" className="mr-2" />
-                  <Text className="text-emerald-950 font-bold text-xs">Simulating BLE Stream...</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="radio-outline" size={14} color="#022c22" className="mr-1.5" />
-                  <Text className="text-emerald-950 font-bold text-xs">Simulate Wearable Stream</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
 
         </ScrollView>
 
@@ -1031,53 +938,6 @@ export default function DigitalTwinScreen() {
   );
 }
 
-/**
- * Reusable Habit Slider component inside Sim Lab.
- */
-const SimSlider = ({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
-  onChange,
-  displayValue
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  onChange: (val: number) => void;
-  displayValue: string;
-}) => {
-  const percent = ((value - min) / (max - min)) * 100;
-  return (
-    <View className="mb-4">
-      <View className="flex-row justify-between items-center mb-1">
-        <Text className="text-emerald-400 text-xs font-bold font-sans">{label}</Text>
-        <Text className="text-white text-xs font-mono font-bold">{displayValue}</Text>
-      </View>
-      <View className="flex-row items-center space-x-2">
-        <TouchableOpacity
-          onPress={() => onChange(Number(Math.max(min, value - step).toFixed(2)))}
-          className="w-8 h-8 rounded-lg bg-emerald-950/60 border border-emerald-900/30 items-center justify-center active:bg-emerald-900/25"
-        >
-          <Text className="text-emerald-400 font-bold text-sm">-</Text>
-        </TouchableOpacity>
-        <View className="flex-1 h-3 bg-emerald-950 rounded-full overflow-hidden border border-emerald-900/20 relative justify-center">
-          <View style={{ width: `${percent}%` }} className="h-full bg-emerald-500 rounded-full" />
-        </View>
-        <TouchableOpacity
-          onPress={() => onChange(Number(Math.min(max, value + step).toFixed(2)))}
-          className="w-8 h-8 rounded-lg bg-emerald-950/60 border border-emerald-900/30 items-center justify-center active:bg-emerald-900/25"
-        >
-          <Text className="text-emerald-400 font-bold text-sm">+</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
 
 const DoshaWheel = React.memo(function DoshaWheel({ vata, pitta, kapha }: { vata: number, pitta: number, kapha: number }) {
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -1265,302 +1125,4 @@ const PulsingMetricRing = React.memo(function PulsingMetricRing({ score, color, 
   );
 });
 
-/**
- * Interactive Lifestyle Simulation Lab Component.
- */
-const LifestyleSimulationLab = React.memo(function LifestyleSimulationLab({
-  baseVata,
-  basePitta,
-  baseKapha,
-  baseAgni,
-  baseOjas
-}: LifestyleSimulationLabProps) {
-  const [sleepHours, setSleepHours] = useState(7.5);
-  const [hydrationLitres, setHydrationLitres] = useState(2.0);
-  const [exerciseMinutes, setExerciseMinutes] = useState(30);
-  const [dinnerHour, setDinnerHour] = useState(19.5); // 7:30 PM
 
-  const breatheAnim = useRef(new Animated.Value(1)).current;
-
-  // Run simulation calculations
-  const result = useMemo(() => {
-    return runLifestyleSimulation(
-      { sleepHours, hydrationLitres, exerciseMinutes, dinnerHour },
-      baseVata,
-      basePitta,
-      baseKapha,
-      baseAgni,
-      baseOjas
-    );
-  }, [sleepHours, hydrationLitres, exerciseMinutes, dinnerHour, baseVata, basePitta, baseKapha, baseAgni, baseOjas]);
-
-  // Breathing simulation loop based on Recovery
-  useEffect(() => {
-    const duration = Math.max(800, 4500 - (result.recovery.simulated * 35));
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(breatheAnim, {
-          toValue: 1.25,
-          duration: duration,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true
-        }),
-        Animated.timing(breatheAnim, {
-          toValue: 0.95,
-          duration: duration,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true
-        })
-      ])
-    );
-    anim.start();
-    return () => anim.stop();
-  }, [result.recovery.simulated]);
-
-  // Dynamic colors matching dominant simulated dosha
-  const getSimTheme = () => {
-    switch (result.dominantAggravation) {
-      case 'Vata':
-        return { color: '#a78bfa', border: 'border-violet-500/40', bg: 'bg-violet-950/20', text: 'text-violet-400' };
-      case 'Pitta':
-        return { color: '#fb923c', border: 'border-orange-500/40', bg: 'bg-orange-950/20', text: 'text-orange-400' };
-      case 'Kapha':
-        return { color: '#2dd4bf', border: 'border-teal-500/40', bg: 'bg-teal-950/20', text: 'text-teal-400' };
-      default:
-        return { color: '#34d399', border: 'border-emerald-500/40', bg: 'bg-emerald-950/20', text: 'text-emerald-400' };
-    }
-  };
-
-  const simTheme = getSimTheme();
-
-  const formatDinnerTime = (hour: number) => {
-    const min = hour % 1 === 0 ? '00' : '30';
-    const h = Math.floor(hour);
-    const period = h >= 12 ? 'PM' : 'AM';
-    const displayHour = h > 12 ? h - 12 : h;
-    return `${displayHour}:${min} ${period}`;
-  };
-
-  const renderDelta = (delta: number) => {
-    if (delta > 0) {
-      return (
-        <View className="bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 rounded ml-1.5">
-          <Text className="text-emerald-400 font-mono font-bold text-[9px]">+{delta}%</Text>
-        </View>
-      );
-    }
-    if (delta < 0) {
-      return (
-        <View className="bg-red-500/20 border border-red-500/40 px-2 py-0.5 rounded ml-1.5">
-          <Text className="text-red-400 font-mono font-bold text-[9px]">{delta}%</Text>
-        </View>
-      );
-    }
-    return (
-      <View className="bg-emerald-950/60 border border-emerald-900/30 px-2 py-0.5 rounded ml-1.5">
-        <Text className="text-emerald-400/40 font-mono font-bold text-[9px]">0%</Text>
-      </View>
-    );
-  };
-
-  return (
-    <View className="space-y-5">
-      
-      {/* 1. DYNAMIC BREATHING TWIN AVATAR PREVIEW */}
-      <View className="bg-[#051f18]/30 border border-emerald-800/20 p-6 rounded-3xl items-center relative overflow-hidden">
-        <View className="absolute right-0 top-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
-        
-        <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-4">Simulated Digital Twin Avatar</Text>
-        
-        {/* Animated Breathing Circle */}
-        <View className="h-36 justify-center items-center w-full relative mb-2">
-          <Animated.View
-            style={{ 
-              transform: [{ scale: breatheAnim }], 
-              borderColor: simTheme.color,
-              shadowColor: simTheme.color,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.35,
-              shadowRadius: 10,
-              elevation: 6
-            }}
-            className={`w-24 h-24 rounded-full border-2 items-center justify-center bg-emerald-950/80 relative`}
-          >
-            <Ionicons name="fitness-outline" size={24} color={simTheme.color} />
-            <Text style={{ color: simTheme.color }} className="text-[10px] font-extrabold font-mono uppercase mt-1">
-              {result.dominantAggravation}
-            </Text>
-          </Animated.View>
-        </View>
-
-        <Text className="text-white text-xs font-bold text-center mt-1">
-          Constitution Forecast: <Text style={{ color: simTheme.color }}>{result.dominantAggravation} Dominant</Text>
-        </Text>
-        <Text className="text-emerald-400/50 text-[10px] text-center px-4 mt-1 leading-relaxed">
-          Avatar breathing scale and color morph instantly to reflect your simulated habits recovery rate.
-        </Text>
-      </View>
-
-      {/* 2. INTERACTIVE SLIDER habbits INPUTS */}
-      <View className="bg-[#051f18]/30 border border-emerald-800/20 p-5 rounded-3xl">
-        <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-4">Configure Habits Sandbox</Text>
-        
-        <SimSlider
-          label="Sleep Duration"
-          value={sleepHours}
-          min={4}
-          max={10}
-          step={0.5}
-          onChange={setSleepHours}
-          displayValue={`${sleepHours} hours`}
-        />
-
-        <SimSlider
-          label="Hydration Volume"
-          value={hydrationLitres}
-          min={0.5}
-          max={4.0}
-          step={0.1}
-          onChange={setHydrationLitres}
-          displayValue={`${hydrationLitres.toFixed(1)} Litres`}
-        />
-
-        <SimSlider
-          label="Exercise Duration"
-          value={exerciseMinutes}
-          min={0}
-          max={90}
-          step={5}
-          onChange={setExerciseMinutes}
-          displayValue={`${exerciseMinutes} mins`}
-        />
-
-        <SimSlider
-          label="Dinner Schedule"
-          value={dinnerHour}
-          min={18}
-          max={23}
-          step={0.5}
-          onChange={setDinnerHour}
-          displayValue={formatDinnerTime(dinnerHour)}
-        />
-      </View>
-
-      {/* 3. SIMULATED VITALS FORECAST COMPARATIVE GRID */}
-      <View className="bg-[#051f18]/30 border border-emerald-800/20 p-5 rounded-3xl">
-        <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-4">Simulated Health Predictions</Text>
-        
-        {/* Agni */}
-        <View className="mb-4 pb-3 border-b border-emerald-900/20 flex-row justify-between items-center">
-          <View className="flex-1 pr-2">
-            <Text className="text-emerald-300 text-xs font-bold">Metabolic Fire (Agni)</Text>
-            <View className="flex-row items-center mt-1 font-mono">
-              <Text className="text-emerald-400/50 text-[10px]">{result.agni.base}%</Text>
-              <Ionicons name="arrow-forward" size={10} color="#047857" style={{ marginHorizontal: 6 }} />
-              <Text className="text-white text-xs font-bold">{result.agni.simulated}%</Text>
-              {renderDelta(result.agni.delta)}
-            </View>
-          </View>
-          <View className="w-24 h-1.5 bg-emerald-950 rounded-full overflow-hidden">
-            <View style={{ width: `${result.agni.simulated}%` }} className="h-full bg-amber-400 rounded-full" />
-          </View>
-        </View>
-
-        {/* Ojas */}
-        <View className="mb-4 pb-3 border-b border-emerald-900/20 flex-row justify-between items-center">
-          <View className="flex-1 pr-2">
-            <Text className="text-emerald-300 text-xs font-bold">Immunity Shield (Ojas)</Text>
-            <View className="flex-row items-center mt-1 font-mono">
-              <Text className="text-emerald-400/50 text-[10px]">{result.ojas.base}%</Text>
-              <Ionicons name="arrow-forward" size={10} color="#047857" style={{ marginHorizontal: 6 }} />
-              <Text className="text-white text-xs font-bold">{result.ojas.simulated}%</Text>
-              {renderDelta(result.ojas.delta)}
-            </View>
-          </View>
-          <View className="w-24 h-1.5 bg-emerald-950 rounded-full overflow-hidden">
-            <View style={{ width: `${result.ojas.simulated}%` }} className="h-full bg-violet-400 rounded-full" />
-          </View>
-        </View>
-
-        {/* Recovery */}
-        <View className="mb-4 pb-3 border-b border-emerald-900/20 flex-row justify-between items-center">
-          <View className="flex-1 pr-2">
-            <Text className="text-emerald-300 text-xs font-bold">Systemic Recovery</Text>
-            <View className="flex-row items-center mt-1 font-mono">
-              <Text className="text-emerald-400/50 text-[10px]">{result.recovery.base}%</Text>
-              <Ionicons name="arrow-forward" size={10} color="#047857" style={{ marginHorizontal: 6 }} />
-              <Text className="text-white text-xs font-bold">{result.recovery.simulated}%</Text>
-              {renderDelta(result.recovery.delta)}
-            </View>
-          </View>
-          <View className="w-24 h-1.5 bg-emerald-950 rounded-full overflow-hidden">
-            <View style={{ width: `${result.recovery.simulated}%` }} className="h-full bg-emerald-500 rounded-full" />
-          </View>
-        </View>
-
-        {/* Energy */}
-        <View className="flex-row justify-between items-center">
-          <View className="flex-1 pr-2">
-            <Text className="text-emerald-300 text-xs font-bold">Circadian Energy</Text>
-            <View className="flex-row items-center mt-1 font-mono">
-              <Text className="text-emerald-400/50 text-[10px]">{result.energy.base}%</Text>
-              <Ionicons name="arrow-forward" size={10} color="#047857" style={{ marginHorizontal: 6 }} />
-              <Text className="text-white text-xs font-bold">{result.energy.simulated}%</Text>
-              {renderDelta(result.energy.delta)}
-            </View>
-          </View>
-          <View className="w-24 h-1.5 bg-emerald-950 rounded-full overflow-hidden">
-            <View style={{ width: `${result.energy.simulated}%` }} className="h-full bg-sky-400 rounded-full" />
-          </View>
-        </View>
-      </View>
-
-      {/* 4. DOSHA RATIOS FORECAST COMPLETED BARS */}
-      <View className="bg-[#051f18]/30 border border-emerald-800/20 p-5 rounded-3xl mb-4">
-        <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-4">Predicted Dosha Ratios</Text>
-        
-        {/* Vata */}
-        <View className="mb-3">
-          <View className="flex-row justify-between mb-1 text-[10px]">
-            <Text className="text-amber-400 font-bold font-sans">Vata (Air & Ether)</Text>
-            <Text className="text-white font-mono font-bold">{result.dosha.simulated.vata}% (Base: {result.dosha.base.vata}%)</Text>
-          </View>
-          <View className="w-full h-2 bg-emerald-950 rounded-full overflow-hidden">
-            <View style={{ width: `${result.dosha.simulated.vata}%` }} className="h-full bg-amber-500 rounded-full" />
-          </View>
-        </View>
-
-        {/* Pitta */}
-        <View className="mb-3">
-          <View className="flex-row justify-between mb-1 text-[10px]">
-            <Text className="text-orange-400 font-bold font-sans">Pitta (Fire & Water)</Text>
-            <Text className="text-white font-mono font-bold">{result.dosha.simulated.pitta}% (Base: {result.dosha.base.pitta}%)</Text>
-          </View>
-          <View className="w-full h-2 bg-emerald-950 rounded-full overflow-hidden">
-            <View style={{ width: `${result.dosha.simulated.pitta}%` }} className="h-full bg-orange-500 rounded-full" />
-          </View>
-        </View>
-
-        {/* Kapha */}
-        <View className="mb-1">
-          <View className="flex-row justify-between mb-1 text-[10px]">
-            <Text className="text-teal-400 font-bold font-sans">Kapha (Earth & Water)</Text>
-            <Text className="text-white font-mono font-bold">{result.dosha.simulated.kapha}% (Base: {result.dosha.base.kapha}%)</Text>
-          </View>
-          <View className="w-full h-2 bg-emerald-950 rounded-full overflow-hidden">
-            <View style={{ width: `${result.dosha.simulated.kapha}%` }} className="h-full bg-teal-500 rounded-full" />
-          </View>
-        </View>
-      </View>
-      
-    </View>
-  );
-});
-
-interface LifestyleSimulationLabProps {
-  baseVata: number;
-  basePitta: number;
-  baseKapha: number;
-  baseAgni: number;
-  baseOjas: number;
-}
