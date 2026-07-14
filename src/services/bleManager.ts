@@ -71,6 +71,11 @@ function stopTelemetryFlushTimer() {
  * Singleton BleManager accessor.
  */
 export function getBleManager(): BleManager | null {
+  if (isExpoGo) {
+    useBLEStore.getState().setError('Bluetooth is not supported in Expo Go. Please run the development build (npx expo run:android) on a physical device.');
+    useBLEStore.getState().setStatus('error');
+    return null;
+  }
   if (!managerInstance) {
     try {
       managerInstance = new BleManager();
