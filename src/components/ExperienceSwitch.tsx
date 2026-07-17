@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Animated, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import { useExperienceStore } from '../store/useExperienceStore';
 
 export function ExperienceSwitch() {
@@ -61,10 +61,10 @@ export function ExperienceSwitch() {
 const styles = StyleSheet.create({
   container: {
     height: 46,
-    backgroundColor: '#0c1713',
+    backgroundColor: '#F2EFE8',
     borderRadius: 23,
     borderWidth: 1,
-    borderColor: '#1e322a',
+    borderColor: '#E4E1D8',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 2,
@@ -75,13 +75,13 @@ const styles = StyleSheet.create({
   activePill: {
     position: 'absolute',
     height: 38,
-    backgroundColor: '#10b981',
+    backgroundColor: '#7D9C83',
     borderRadius: 19,
-    shadowColor: '#10b981',
+    shadowColor: '#607C64',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   tab: {
     flex: 1,
@@ -93,13 +93,13 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 12,
     fontWeight: 'bold',
-    fontFamily: 'System',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
   activeText: {
-    color: '#042f1a',
+    color: '#FFFFFF',
   },
   inactiveText: {
-    color: '#34d399',
-    opacity: 0.75,
+    color: '#607C64',
+    opacity: 0.8,
   },
 });
