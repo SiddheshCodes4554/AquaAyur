@@ -12,6 +12,66 @@ It merges the ancient medical wisdom of **Ayurveda** (Dosha bio-energetic assess
 
 ---
 
+## 🚀 Key Core Features (Deep-Dive)
+
+### 📊 1. Redesigned Premium Insights Dashboard
+* **Health Scores Concentric Rings**: Visualizes a 3x2 grid of custom SVG circular progress rings tracking **Energy**, **Recovery**, **Hydration**, **Sleep**, **Activity**, and **Mind** stillness.
+* **Vital Trends Area & Line Chart**: High-performance SVG area chart displaying 7-day Recovery (green) and Energy (orange) values with smooth visual gradients and axis labels.
+* **Body Balance Progress Card**: Reconstructed Vata (Movement), Pitta (Heat), and Kapha (Stability) metrics as clean horizontal progress bars, complete with a terracotta advisory warning card.
+* **Today's Recommendations Tags**: Interactive capsule buttons for daily habits which open detailed sliding bottom sheets.
+* **Health Forecast & Connected Line Graph**: Showcases direction indicator arrow badges for tomorrow's forecast and a connected node SVG prediction trend chart.
+* **Collapsible Accordions**: Expandable details for "Today vs This Week", "Wellness History" (archived reports), and "Habit Progress".
+
+### 🎓 2. Interactive "Learn Ayurveda" Experience
+* **Duolingo-Style Lesson System**: Teach users about Doshas, Vata, Pitta, Kapha, Agni, Ojas, and Dinacharya through 2-minute practical lessons.
+* **Gamified Progress Tracking**: Persistent Zustand store tracking completed lessons, total XP, daily streaks, and unlocked achievements.
+* **Interactive Quizzes**: Multiple-choice quizzes featuring smooth slide card drawers, feedback highlights, and haptic/shake validation effects.
+
+### 📝 3. Concept Explanations & Bottom Sheets
+* **Sliding Bottom Sheets**: Interactive, modal drawers for every single Ayurvedic concept that explain what it means, why it was detected, how it's estimated, and what actions to take.
+* **Lesson Redirects**: Sliding sheets link directly to their corresponding lesson card inside the Learn tab.
+
+### 📖 4. Daily Story Engine & Onboarding
+* **Daily Story compiler**: Formulates a personalized morning story based on biometrics, sleep duration, and hydration.
+* **Welcome Onboarding Card**: Dismissible orientation card helping new users understand how wearable metrics, habits, and Ayurvedic wellness connect.
+* **Body Intelligence Timeline**: Staggered, interactive cause-and-effect timeline diagram linking daily habits, sleep scores, telemetry metrics, and element accumulations.
+
+---
+
+## 🛠️ Technology Stack & Libraries
+
+| Dependency | Purpose | Version |
+| :--- | :--- | :--- |
+| **Expo Router** | Native routing using a file-based structure | `~56.2.14` |
+| **React Native** | Cross-platform native application framework | `0.85.3` |
+| **NativeWind & Tailwind CSS** | Unified styling and design tokens | `^5.0.0-preview.4` |
+| **react-native-ble-plx** | Handles Bluetooth Low Energy interactions, scans, and subscriptions | `^3.5.1` |
+| **expo-sqlite** | Fast local SQLite database for offline buffering | `~56.0.5` |
+| **Supabase JS Client** | Remote database client and authentication interface | `^2.106.2` |
+| **@clerk/clerk-expo** | Secure authentication provider integration | `^2.19.31` |
+| **@groq/sdk** | Connects to high-performance Llama3 endpoints for OCR, chat, and reports | Latest |
+| **react-native-svg** | Renders custom high-fidelity area charts, line graphs, and rings | `~15.2.0` |
+| **react-native-reanimated** | Fluid micro-animations and screen transitions | `4.3.1` |
+
+---
+
+## 🔄 Offline Sync Architecture
+
+AquaAyur implements a robust offline-first synchronization strategy. Telemetry, hydration, and sleep logs captured offline are stored in a local SQLite queue and dynamically uploaded to Supabase PostgreSQL when internet connectivity is re-established.
+
+```mermaid
+graph TD
+    A[Biometric Sensors / Manual Inputs] --> B{Internet Connection?}
+    B -- Online --> C[Supabase Cloud Database]
+    B -- Offline --> D[Local SQLite Buffer DB]
+    D --> E[Sync Manager Monitoring NetInfo]
+    E -- Connection Restored --> F[Cleanse & Filter Constraints]
+    F --> C
+```
+
+---
+
+
 ## 🛠️ Quick Start & Setup Guide
 
 ### 📋 Prerequisites
@@ -142,62 +202,6 @@ To run with native Bluetooth libraries (`react-native-ble-plx`) and connect to r
 | **@groq/sdk** | Connects to high-performance Llama3 endpoints for OCR, chat, and reports | Latest |
 | **react-native-svg** | Renders custom high-fidelity area charts, line graphs, and rings | `~15.2.0` |
 | **react-native-reanimated** | Fluid micro-animations and screen transitions | `4.3.1` |
-
----
-
-## 🏗️ System Architecture
-
-AquaAyur features a highly modular, decoupled architecture consisting of an IoT/Simulator hardware interface, a state-driven client application with specialized Ayurvedic intelligence engines, and a remote cloud service layer:
-
-```mermaid
-flowchart TB
-    subgraph Sensors [Hardware & Telemetry]
-        H[ESP32 Wearable Sensors] -->|Bluetooth LE| B[react-native-ble-plx Service]
-        S[BLE Wearable Simulator] -->|Virtual Packets| B
-    end
-
-    subgraph App [AquaAyur Client Application]
-        direction TB
-        subgraph UI [Presentation Layer]
-            U1[Dashboard Tab: Daily Story, Welcome Card]
-            U2[Insights Tab: SVG Trend Charts, Concentric Rings]
-            U3[Learn Tab: Gamified Nodes, Quizzes]
-            U4[Dinacharya Tab: Pranayama Coach, Routines]
-            U5[Coach Tab: AI Ayurvedic Advisor]
-        end
-
-        subgraph Stores [Zustand State Stores]
-            S1[useSensorStore]
-            S2[useTelemetryStore / useSleepStore]
-            S3[useLearnStore / useExperienceStore]
-            S4[useAgniStore / useOjasStore]
-        end
-
-        subgraph Engines [Ayurvedic Intelligence Engines]
-            E1[Daily Story Engine]
-            E2[Predictive Health Engine]
-            E3[Translation Engine]
-            E4[Recommendation Explainer]
-        end
-
-        subgraph Data [Storage & Sync Management]
-            DB1[Local SQLite Database]
-            DB2[Offline Sync Queue]
-        end
-    end
-
-    subgraph Cloud [External & Remote Cloud API Layer]
-        C1[Supabase remote PostgreSQL DB]
-        C2[Groq AI Llama 3 SDK]
-    end
-
-    B --> Stores
-    Stores --> UI
-    UI --> Engines
-    Engines --> Data
-    Data -->|Automatic Sync| C1
-    Engines -->|Meal Analysis & Diagnostic PDF| C2
-```
 
 ---
 
