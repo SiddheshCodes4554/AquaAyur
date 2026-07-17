@@ -16,7 +16,16 @@ import { calculateDailyDosha } from '../../services/doshaEngine';
 import { calculateDailyAgni } from '../../services/agniEngine';
 import { calculateDailyOjas } from '../../services/ojasEngine';
 import AyurExplanationSheet from '../../components/AyurExplanationSheet';
+import AyurConceptExplanationSheet from '../../components/AyurConceptExplanationSheet';
+import { ConceptId } from '../../services/conceptExplanations';
 import { getExplanationForRecommendation, ExplanationContext } from '../../services/recommendationExplainer';
+import { useExperienceStore } from '../../store/useExperienceStore';
+import { ExperienceSwitch } from '../../components/ExperienceSwitch';
+import { 
+  getLocalizedDoshaState, 
+  getLocalizedAgni, 
+  getLocalizedOjas 
+} from '../../services/translationEngine';
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -34,8 +43,10 @@ export default function DigitalTwinScreen() {
   const ojasHistory = useOjasStore(state => state.history);
   const liveData = useSensorStore(state => state.liveData);
   const [activeTab, setActiveTab] = useState<TwinTab>('balance');
+  const { mode, locale } = useExperienceStore();
   const [explanationVisible, setExplanationVisible] = useState(false);
   const [explanationContext, setExplanationContext] = useState<ExplanationContext | null>(null);
+  const [selectedConcept, setSelectedConcept] = useState<ConceptId | null>(null);
 
   const handleOpenExplanation = (recommendationTitle: string) => {
     const biometricsSnapshot = liveData ? {
@@ -361,33 +372,34 @@ export default function DigitalTwinScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#020b08' }}>
-      <LinearGradient colors={['#03120f', '#010605']} className="flex-1">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F6F0' }}>
+      <LinearGradient colors={['#F8F6F0', '#F2EFE8']} className="flex-1">
         {/* Header Navigation */}
-        <View className="px-6 py-4 flex-row items-center justify-between border-b border-emerald-900/35">
+        <View className="px-6 py-4 flex-row items-center justify-between border-b border-[#E4E1D8]">
           <View className="flex-row items-center">
             <TouchableOpacity 
               onPress={() => router.back()} 
-              className="p-1 rounded-lg bg-emerald-900/20 border border-emerald-800/30 mr-4 active:bg-emerald-900/40"
+              className="p-1 rounded-lg bg-[#F2EFE8] border border-[#E4E1D8] mr-4 active:bg-[#F2EFE8]/80"
             >
-              <Ionicons name="chevron-back" size={20} color="#34d399" />
+              <Ionicons name="chevron-back" size={20} color="#607C64" />
             </TouchableOpacity>
             <View>
-              <Text className="text-white text-lg font-bold">Ayurvedic Digital Twin</Text>
-              <Text className="text-emerald-400/50 text-[10px] uppercase font-bold tracking-wider">Bio-simulation & State</Text>
+              <Text className="text-[#2E3A2F] text-base font-serif font-black">Ayurvedic Digital Twin</Text>
+              <Text className="text-[#607C64]/70 text-[9px] uppercase font-bold tracking-wider font-mono">Bio-simulation & State</Text>
             </View>
           </View>
-          <View className="flex-row items-center bg-emerald-950/70 border border-emerald-900/40 px-2.5 py-1 rounded-full">
-            <View className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse" />
-            <Text className="text-emerald-400/80 text-[8px] font-mono font-bold uppercase">Live Updated: {lastUpdated}</Text>
+          <View className="flex-row items-center bg-[#F2EFE8] border border-[#E4E1D8] px-2.5 py-1 rounded-full">
+            <View className="w-1.5 h-1.5 rounded-full bg-[#607C64] mr-1.5" />
+            <Text className="text-[#607C64] text-[8px] font-mono font-bold uppercase">Live Updated: {lastUpdated}</Text>
           </View>
         </View>
 
         <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 110 }} className="px-6 py-4" showsVerticalScrollIndicator={false}>
           
+          <ExperienceSwitch />
           {/* Main Dynamic Avatar Container */}
           <View className="items-center justify-center py-6 mb-4 relative">
-            <View className="w-72 h-72 rounded-full border border-emerald-800/25 bg-[#031510]/45 items-center justify-center shadow-xl shadow-emerald-950/20 relative overflow-hidden">
+            <View className="w-72 h-72 rounded-full border border-[#E4E1D8] bg-white items-center justify-center shadow-md shadow-[#E4E1D8]/45 relative overflow-hidden">
               {/* Outer Glowing Shield representing Ojas */}
               <Animated.View 
                 style={{
@@ -395,14 +407,14 @@ export default function DigitalTwinScreen() {
                   height: 256,
                   borderRadius: 9999,
                   borderWidth: 2,
-                  borderColor: 'rgba(167, 139, 250, 0.45)', // Violet
+                  borderColor: 'rgba(125, 156, 131, 0.45)', // Sage Green
                   position: 'absolute',
                   transform: [{ scale: ojasBreathe }],
                   opacity: 0.3 + (ojas / 100) * 0.6,
-                  shadowColor: '#a78bfa',
+                  shadowColor: '#7d9c83',
                   shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.5,
-                  shadowRadius: 10,
+                  shadowOpacity: 0.4,
+                  shadowRadius: 8,
                 }}
               />
 
@@ -419,49 +431,49 @@ export default function DigitalTwinScreen() {
                   
                   {/* Mandala Fill Gradient */}
                   <RadialGradient id="mandalaShine" cx="50%" cy="50%" rx="50%" ry="50%">
-                    <Stop offset="0%" stopColor="rgba(52, 211, 153, 0.08)" stopOpacity="0.8" />
-                    <Stop offset="100%" stopColor="rgba(5, 31, 24, 0.5)" stopOpacity="0.1" />
+                    <Stop offset="0%" stopColor="rgba(96, 124, 100, 0.08)" stopOpacity="0.8" />
+                    <Stop offset="100%" stopColor="rgba(248, 246, 240, 0.5)" stopOpacity="0.1" />
                   </RadialGradient>
                 </Defs>
 
                 {/* Base reference lines */}
-                <Line x1="150" y1="150" x2="150" y2="30" stroke="rgba(16, 185, 129, 0.1)" strokeWidth="1" strokeDasharray="4,4" />
-                <Line x1="150" y1="150" x2="253.9" y2="210" stroke="rgba(16, 185, 129, 0.1)" strokeWidth="1" strokeDasharray="4,4" />
-                <Line x1="150" y1="150" x2="46.1" y2="210" stroke="rgba(16, 185, 129, 0.1)" strokeWidth="1" strokeDasharray="4,4" />
+                <Line x1="150" y1="150" x2="150" y2="30" stroke="rgba(96, 124, 100, 0.12)" strokeWidth="1" strokeDasharray="4,4" />
+                <Line x1="150" y1="150" x2="253.9" y2="210" stroke="rgba(96, 124, 100, 0.12)" strokeWidth="1" strokeDasharray="4,4" />
+                <Line x1="150" y1="150" x2="46.1" y2="210" stroke="rgba(96, 124, 100, 0.12)" strokeWidth="1" strokeDasharray="4,4" />
                 
                 {/* Dynamic Morphing Polygon representing Doshas */}
                 <Polygon
                   points={polyPoints}
                   fill="url(#mandalaShine)"
-                  stroke="rgba(52, 211, 153, 0.75)"
+                  stroke="rgba(96, 124, 100, 0.75)"
                   strokeWidth="2.5"
                 />
 
-                {/* Inner polygon overlays to create a rich vector neon glow */}
+                {/* Inner polygon overlays to create a rich vector glow */}
                 <Polygon
                   points={polyPoints}
                   fill="none"
-                  stroke="rgba(52, 211, 153, 0.2)"
+                  stroke="rgba(96, 124, 100, 0.15)"
                   strokeWidth="8"
                 />
 
                 {/* Vertex Label Points */}
                 {/* Vata (Air/Ether) Top Node */}
                 <G>
-                  <AnimatedCircle cx="150" cy={vataY} r="8" fill="#020b08" stroke="#38bdf8" strokeWidth={2.5} />
+                  <AnimatedCircle cx="150" cy={vataY} r="8" fill="#F8F6F0" stroke="#38bdf8" strokeWidth={2.5} />
                   <AnimatedCircle cx="150" cy={vataY} r="18" fill="rgba(56, 189, 248, 0.08)" />
                 </G>
 
                 {/* Pitta (Fire/Water) Bottom-Right Node */}
                 <G>
-                  <AnimatedCircle cx={pittaX} cy={pittaY} r="8" fill="#020b08" stroke="#fb923c" strokeWidth={2.5} />
+                  <AnimatedCircle cx={pittaX} cy={pittaY} r="8" fill="#F8F6F0" stroke="#fb923c" strokeWidth={2.5} />
                   <AnimatedCircle cx={pittaX} cy={pittaY} r="18" fill="rgba(251, 146, 60, 0.08)" />
                 </G>
 
                 {/* Kapha (Earth/Water) Bottom-Left Node */}
                 <G>
-                  <AnimatedCircle cx={kaphaX} cy={kaphaY} r="8" fill="#020b08" stroke="#34d399" strokeWidth={2.5} />
-                  <AnimatedCircle cx={kaphaX} cy={kaphaY} r="18" fill="rgba(52, 211, 153, 0.08)" />
+                  <AnimatedCircle cx={kaphaX} cy={kaphaY} r="8" fill="#F8F6F0" stroke="#7D9C83" strokeWidth={2.5} />
+                  <AnimatedCircle cx={kaphaX} cy={kaphaY} r="18" fill="rgba(125, 156, 131, 0.08)" />
                 </G>
 
                 {/* CENTRAL AGNI FLAME CORE */}
@@ -472,24 +484,44 @@ export default function DigitalTwinScreen() {
 
               {/* Dynamic Labels absolute positioned */}
               <View className="absolute top-7 items-center">
-                <Text className="text-sky-400 font-mono font-bold text-[9px] tracking-widest uppercase">Vata (Air)</Text>
-                <Text className="text-white text-xs font-extrabold">{vata}%</Text>
+                <Text className="text-sky-500 font-mono font-bold text-[9px] tracking-widest uppercase">Vata (Air)</Text>
+                <Text className="text-[#2E3A2F] text-xs font-extrabold">
+                  {mode === 'wellness' 
+                    ? (vata > 35 
+                        ? (locale === 'sa' ? 'Prabala Vāta' : 'Active Wind') 
+                        : (locale === 'sa' ? 'Sama Vāta' : 'Flowing')) 
+                    : `${vata}%`}
+                </Text>
               </View>
 
+              {/* Pitta */}
               <View className="absolute bottom-6 right-5 items-center">
-                <Text className="text-orange-400 font-mono font-bold text-[9px] tracking-widest uppercase">Pitta (Fire)</Text>
-                <Text className="text-white text-xs font-extrabold">{pitta}%</Text>
+                <Text className="text-orange-500 font-mono font-bold text-[9px] tracking-widest uppercase">Pitta (Fire)</Text>
+                <Text className="text-[#2E3A2F] text-xs font-extrabold">
+                  {mode === 'wellness' 
+                    ? (pitta > 35 
+                        ? (locale === 'sa' ? 'Prabala Pitta' : 'Warm Heat') 
+                        : (locale === 'sa' ? 'Sama Pitta' : 'Temperate')) 
+                    : `${pitta}%`}
+                </Text>
               </View>
 
+              {/* Kapha */}
               <View className="absolute bottom-6 left-5 items-center">
-                <Text className="text-emerald-400 font-mono font-bold text-[9px] tracking-widest uppercase">Kapha (Earth)</Text>
-                <Text className="text-white text-xs font-extrabold">{kapha}%</Text>
+                <Text className="text-[#7D9C83] font-mono font-bold text-[9px] tracking-widest uppercase">Kapha (Earth)</Text>
+                <Text className="text-[#2E3A2F] text-xs font-extrabold">
+                  {mode === 'wellness' 
+                    ? (kapha > 35 
+                        ? (locale === 'sa' ? 'Prabala Kapha' : 'Heavy Earth') 
+                        : (locale === 'sa' ? 'Sama Kapha' : 'Grounded')) 
+                    : `${kapha}%`}
+                </Text>
               </View>
             </View>
           </View>
 
           {/* Quick Selector Tabs */}
-          <View className="flex-row bg-emerald-950/40 p-1 rounded-xl border border-emerald-900/25 mb-5">
+          <View className="flex-row bg-[#F2EFE8] p-1 rounded-xl border border-[#E4E1D8] mb-5">
             {(['balance', 'doshas', 'indices'] as TwinTab[]).map(tab => {
               const isSelected = activeTab === tab;
               let label = 'Overview';
@@ -501,12 +533,12 @@ export default function DigitalTwinScreen() {
                   key={tab}
                   onPress={() => setActiveTab(tab)}
                   className={`flex-1 py-2 rounded-lg items-center ${
-                    isSelected ? 'bg-emerald-500' : 'bg-transparent'
+                    isSelected ? 'bg-[#7D9C83]' : 'bg-transparent'
                   }`}
                 >
                   <Text
                     className={`text-[10px] font-bold ${
-                      isSelected ? 'text-emerald-950' : 'text-emerald-400/80'
+                      isSelected ? 'text-white' : 'text-[#607C64]/60'
                     }`}
                   >
                     {label}
@@ -519,38 +551,54 @@ export default function DigitalTwinScreen() {
           {/* TAB CONTENT 1: OVERVIEW BALANCE PANEL */}
           {activeTab === 'balance' && (
             <View className="space-y-4">
-              <View className="bg-[#051f18]/30 border border-emerald-800/20 p-5 rounded-2xl">
-                <Text className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">State Interpretation</Text>
-                <Text className="text-white text-base font-extrabold mb-2">{getDominantDoshaText()}</Text>
-                <Text className="text-emerald-100/70 text-xs leading-relaxed">
-                  {getDominantDoshaAdvice()}
+              <View className="bg-white border border-[#E4E1D8] p-5 rounded-2xl shadow-sm">
+                <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-widest font-mono mb-1">State Interpretation</Text>
+                <Text className="text-[#2E3A2F] text-base font-extrabold mb-2 font-serif">
+                  {mode === 'wellness' 
+                    ? (locale === 'sa' ? 'Sama-Sthiti' : 'Grounded & Steady') 
+                    : getDominantDoshaText()}
+                </Text>
+                <Text className="text-slate-600 text-xs leading-relaxed font-serif">
+                  {mode === 'wellness' 
+                    ? getLocalizedDoshaState(vata, pitta, kapha, locale).whatIsHappening 
+                    : getDominantDoshaAdvice()}
                 </Text>
               </View>
 
               <View className="flex-row gap-4">
-                <View className="flex-1 bg-[#051f18]/30 border border-emerald-800/20 p-4 rounded-2xl items-center">
-                  <Ionicons name="flame-outline" size={20} color="#f59e0b" />
-                  <Text className="text-emerald-400/50 text-[10px] font-bold uppercase mt-2">Metabolism</Text>
-                  <Text className="text-white text-lg font-extrabold mt-1">{agni}/100</Text>
-                  <Text className="text-[8px] text-emerald-300/60 font-mono mt-0.5">Agni score</Text>
+                <View className="flex-1 bg-white border border-[#E4E1D8] p-4 rounded-2xl items-center shadow-sm">
+                  <Ionicons name="flame-outline" size={20} color="#C07A65" />
+                  <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-widest font-mono mt-2">Metabolism</Text>
+                  <Text className="text-[#2E3A2F] text-xs font-extrabold mt-1 text-center">
+                    {mode === 'wellness' 
+                      ? getLocalizedAgni(agni, locale).label 
+                      : `${agni}/100`}
+                  </Text>
+                  <Text className="text-[8px] text-slate-500 font-mono mt-0.5">Agni status</Text>
                 </View>
 
-                <View className="flex-1 bg-[#051f18]/30 border border-emerald-800/20 p-4 rounded-2xl items-center">
-                  <Ionicons name="shield-checkmark-outline" size={20} color="#a78bfa" />
-                  <Text className="text-emerald-400/50 text-[10px] font-bold uppercase mt-2">Immunity</Text>
-                  <Text className="text-white text-lg font-extrabold mt-1">{ojas}/100</Text>
-                  <Text className="text-[8px] text-emerald-300/60 font-mono mt-0.5">Ojas vitality</Text>
+                <View className="flex-1 bg-white border border-[#E4E1D8] p-4 rounded-2xl items-center shadow-sm">
+                  <Ionicons name="shield-checkmark-outline" size={20} color="#7D9C83" />
+                  <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-widest font-mono mt-2">Immunity</Text>
+                  <Text className="text-[#2E3A2F] text-xs font-extrabold mt-1 text-center">
+                    {mode === 'wellness' 
+                      ? getLocalizedOjas(ojas, locale).label 
+                      : `${ojas}/100`}
+                  </Text>
+                  <Text className="text-[8px] text-slate-500 font-mono mt-0.5">Ojas status</Text>
                 </View>
               </View>
 
-              <View className="bg-sky-950/20 border border-sky-900/30 p-4 rounded-2xl">
-                <Text className="text-sky-300 text-xs font-bold mb-1.5 flex-row items-center">
-                  🧬 Real-time Update Strategy
-                </Text>
-                <Text className="text-sky-200/60 text-[11px] leading-relaxed">
-                  The Ayurvedic Digital Twin is a reactive simulation. Whenever wearable heart rate/temperature syncs, or hydration logs are updated, the background calculations recompute Vata, Pitta, Kapha, Agni, and Ojas. The twin morphs its coordinates instantly using database triggers.
-                </Text>
-              </View>
+              {mode === 'evidence' && (
+                <View className="bg-[#F5F2EA] border border-[#E4E1D8] p-4 rounded-2xl">
+                  <Text className="text-[#607C64] text-xs font-bold mb-1.5 flex-row items-center font-serif">
+                    🧬 Real-time Update Strategy
+                  </Text>
+                  <Text className="text-slate-600 text-[11px] leading-relaxed">
+                    The Ayurvedic Digital Twin is a reactive simulation. Whenever wearable heart rate/temperature syncs, or hydration logs are updated, the background calculations recompute Vata, Pitta, Kapha, Agni, and Ojas. The twin morphs its coordinates instantly using database triggers.
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -558,32 +606,114 @@ export default function DigitalTwinScreen() {
           {activeTab === 'doshas' && (
             <View className="space-y-5">
               
-              {/* IMMERSIVE DOSHA WHEEL */}
-              <View className="bg-[#111d19]/45 border border-[#1f372f] p-5 rounded-3xl items-center">
-                <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Concentric Dosha Wheel</Text>
-                <DoshaWheel vata={vata} pitta={pitta} kapha={kapha} />
-              </View>
+              {/* IMMERSIVE DOSHA WHEEL OR QUALITATIVE LIST */}
+              {mode === 'evidence' ? (
+                <View className="bg-white border border-[#E4E1D8] p-5 rounded-3xl items-center shadow-sm">
+                  <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-widest font-mono mb-2">Concentric Dosha Wheel</Text>
+                  <DoshaWheel vata={vata} pitta={pitta} kapha={kapha} />
+                </View>
+              ) : (
+                <View className="bg-white border border-[#E4E1D8] p-5 rounded-3xl shadow-sm">
+                  <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-widest font-mono mb-3.5">Active Elements Status</Text>
+                  
+                  <View className="space-y-3">
+                    {/* Vata Card */}
+                    <View className="bg-[#F5F2EA]/40 border border-[#E4E1D8] p-4.5 rounded-2xl font-serif">
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-sky-500 text-xs font-bold font-serif">Vata (Air & Ether)</Text>
+                        <TouchableOpacity 
+                          onPress={() => setSelectedConcept('vata')}
+                          className="bg-[#F2EFE8] border border-[#E4E1D8] px-2.5 py-0.5 rounded-full active:bg-[#F2EFE8]/70"
+                        >
+                          <Text className="text-sky-500 text-[8px] font-bold uppercase font-mono">Learn Why</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <Text className="text-slate-600 text-xs mt-1.5 leading-relaxed">
+                        {vata > 35 
+                          ? 'Variable & sensitive: Needs grounding warmth, regular sleep, and slow abdominal breathing.' 
+                          : 'Flowing & creative: Balanced movement and calm nervous channels.'}
+                      </Text>
+                    </View>
+
+                    {/* Pitta Card */}
+                    <View className="bg-[#F5F2EA]/40 border border-[#E4E1D8] p-4.5 rounded-2xl font-serif">
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-orange-500 text-xs font-bold font-serif">Pitta (Fire & Water)</Text>
+                        <TouchableOpacity 
+                          onPress={() => setSelectedConcept('pitta')}
+                          className="bg-[#F2EFE8] border border-[#E4E1D8] px-2.5 py-0.5 rounded-full active:bg-[#F2EFE8]/70"
+                        >
+                          <Text className="text-orange-500 text-[8px] font-bold uppercase font-mono">Learn Why</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <Text className="text-slate-600 text-xs mt-1.5 leading-relaxed">
+                        {pitta > 35 
+                          ? 'Intense & warm: Focus on cooling foods, coconut water, and a short walk in the shade.' 
+                          : 'Temperate & focused: Steady metabolic drive and sharp intellect.'}
+                      </Text>
+                    </View>
+
+                    {/* Kapha Card */}
+                    <View className="bg-[#F5F2EA]/40 border border-[#E4E1D8] p-4.5 rounded-2xl font-serif">
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-[#7D9C83] text-xs font-bold font-serif">Kapha (Earth & Water)</Text>
+                        <TouchableOpacity 
+                          onPress={() => setSelectedConcept('kapha')}
+                          className="bg-[#F2EFE8] border border-[#E4E1D8] px-2.5 py-0.5 rounded-full active:bg-[#F2EFE8]/70"
+                        >
+                          <Text className="text-[#7D9C83] text-[8px] font-bold uppercase font-mono">Learn Why</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <Text className="text-slate-600 text-xs mt-1.5 leading-relaxed">
+                        {kapha > 35 
+                          ? 'Heavy & slow: Stimulate with cardiovascular activity, brisk walking, and ginger water.' 
+                          : 'Grounded & stable: Solid immunity, calm demeanor, and structural strength.'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
 
               {/* CURRENT BALANCE & NARRATIVE EXPLANATION */}
-              <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl">
-                <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Constitutional Balance</Text>
-                <Text className="text-white text-xl font-serif font-bold leading-snug mb-3">
-                  {getDominantDoshaText()}
+              <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl shadow-sm">
+                <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-widest font-mono mb-2">Constitutional Balance</Text>
+                <Text className="text-[#2E3A2F] text-xl font-serif font-bold leading-snug mb-3">
+                  {mode === 'wellness' ? (() => {
+                    const max = Math.max(vata, pitta, kapha);
+                    if (max === vata) return locale === 'sa' ? 'Vāta Shāmana Mārgadarśana' : 'Grounding (Vata) Guidance';
+                    if (max === pitta) return locale === 'sa' ? 'Pitta Shāmana Mārgadarśana' : 'Tempering (Pitta) Guidance';
+                    return locale === 'sa' ? 'Kapha Shāmana Mārgadarśana' : 'Invigorating (Kapha) Guidance';
+                  })() : getDominantDoshaText()}
                 </Text>
-                <Text className="text-slate-300 text-xs leading-relaxed mb-4">
-                  {currentDosha?.explanationSummary?.reasoning || getDominantDoshaAdvice()}
+                <Text className="text-slate-650 text-xs leading-relaxed mb-4 font-serif">
+                  {mode === 'wellness' 
+                    ? getLocalizedDoshaState(vata, pitta, kapha, locale).whatIsHappening + ' ' + getLocalizedDoshaState(vata, pitta, kapha, locale).whatTodo
+                    : (currentDosha?.explanationSummary?.reasoning || getDominantDoshaAdvice())}
                 </Text>
 
                 {/* Recent Changes Narrative */}
-                <View className="border-t border-[#1f372f] pt-4 mt-2">
-                  <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-wider font-mono mb-1.5">Recent Changes</Text>
-                  <Text className="text-slate-300 text-xs leading-relaxed">
+                <View className="border-t border-[#E4E1D8]/60 pt-4 mt-2">
+                  <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono mb-1.5">Recent Changes</Text>
+                  <Text className="text-slate-600 text-xs leading-relaxed">
                     {(() => {
                       const yesterdayRecord = doshaHistory && doshaHistory.length > 0 ? doshaHistory[0] : null;
-                      if (!yesterdayRecord) return 'Homeostasis established. Sync telemetry daily to map dynamic element trends.';
+                      if (!yesterdayRecord) return locale === 'sa' ? 'Sama-sthitiḥ prathitā. Pratidinaṁ sync kuru.' : 'Homeostasis established. Sync telemetry daily to map dynamic element trends.';
                       const vataDiff = Math.round(vata - yesterdayRecord.vata_percentage);
                       const pittaDiff = Math.round(pitta - yesterdayRecord.pitta_percentage);
                       const kaphaDiff = Math.round(kapha - yesterdayRecord.kapha_percentage);
+
+                      if (mode === 'wellness') {
+                        const changes = [];
+                        if (vataDiff > 2) changes.push(locale === 'sa' ? "Vāta-cañcalatā mandam pravṛddhā." : "Your sensitivity to routines has increased slightly.");
+                        else if (vataDiff < -2) changes.push(locale === 'sa' ? "Vāto praśāmya sthiratām prāptaḥ." : "Your Vata winds have settled, bringing calm grounding.");
+                        if (pittaDiff > 2) changes.push(locale === 'sa' ? "Pitta-tejaḥ śarīre svalpam uṣṇībhavati." : "Your internal body warmth is slightly more active.");
+                        else if (pittaDiff < -2) changes.push(locale === 'sa' ? "Pittam sama-sthitau śītalam bhavati." : "Your internal fire is calming to a comfortable level.");
+                        if (kaphaDiff > 2) changes.push(locale === 'sa' ? "Kaphasya gurutvaṁ sthairyaṁ ca vardhitam." : "Your system is holding more grounding stability but might feel slightly heavier.");
+                        else if (kaphaDiff < -2) changes.push(locale === 'sa' ? "Manda-kapha-śaithilyaṁ praṇaṣṭam." : "Slower lethargy is clearing out, bringing lighter energy.");
+
+                        if (changes.length === 0) return locale === 'sa' ? 'Sama-sthitiḥ. Doṣāḥ pūrva-vat sthirāḥ santi.' : 'Your element balances remain steady and aligned with yesterday.';
+                        return changes.join(' ');
+                      }
 
                       const changes = [];
                       if (vataDiff !== 0) changes.push(`Vata wind ${vataDiff > 0 ? 'increased' : 'decreased'} by ${Math.abs(vataDiff)}%`);
@@ -598,23 +728,31 @@ export default function DigitalTwinScreen() {
               </View>
 
               {/* DYNAMIC FORECAST PREDICTIONS */}
-              <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl">
-                <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-3">Constitutional Projections</Text>
+              <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl shadow-sm shadow-[#E4E1D8]/20">
+                <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono mb-3">Constitutional Projections</Text>
                 
                 <View className="space-y-4">
                   {/* Scenario A: Followed */}
-                  <View className="bg-emerald-950/20 border border-emerald-900/35 p-4.5 rounded-2xl">
-                    <Text className="text-emerald-400 text-xs font-bold font-serif mb-1.5">If Daily Plan is Followed</Text>
-                    <Text className="text-slate-300 text-xs leading-relaxed">
-                      Sustaining recommendations grounds active element peaks (Vata/Pitta) and shifts your constitution closer to balanced base proportions, raising Ojas immunity score tomorrow to {Math.round(ojas + 4)}%.
+                  <View className="bg-emerald-500/5 border border-emerald-500/10 p-4.5 rounded-2xl">
+                    <Text className="text-emerald-700 text-xs font-bold font-serif mb-1.5">If Daily Plan is Followed</Text>
+                    <Text className="text-slate-600 text-xs leading-relaxed">
+                      {mode === 'wellness' 
+                        ? (locale === 'sa' 
+                            ? 'Niyama-pālanena sarve doṣāḥ praśāmyanti, ojo-balaṁ vardhate.' 
+                            : getLocalizedDoshaState(vata, pitta, kapha, locale).whatNextDay)
+                        : `Sustaining recommendations grounds active element peaks (Vata/Pitta) and shifts your constitution closer to balanced base proportions, raising Ojas immunity score tomorrow to ${Math.round(ojas + 4)}%.`}
                     </Text>
                   </View>
 
                   {/* Scenario B: Ignored */}
-                  <View className="bg-rose-950/20 border border-rose-900/35 p-4.5 rounded-2xl">
-                    <Text className="text-rose-400 text-xs font-bold font-serif mb-1.5">If Recommendations are Ignored</Text>
-                    <Text className="text-slate-300 text-xs leading-relaxed">
-                      Neglecting routine adjustments leads to Pitta fire accumulation and Vata wind scatter. Resting heart rate is projected to climb, lowering digestive Agni scores to {Math.round(agni - 5)}%.
+                  <View className="bg-rose-500/5 border border-rose-500/10 p-4.5 rounded-2xl">
+                    <Text className="text-rose-700 text-xs font-bold font-serif mb-1.5">If Recommendations are Ignored</Text>
+                    <Text className="text-slate-600 text-xs leading-relaxed">
+                      {mode === 'wellness' 
+                        ? (locale === 'sa' 
+                            ? 'Niyama-upekṣayā pitta-prakopo vāta-cañcalatā ca vardhate, śvaḥ pācana-kriyā mandībhavati.' 
+                            : 'Neglecting routine adjustments leads to Pitta fire accumulation and Vata wind scatter. Resting heart rate is projected to climb, weakening your core digestive fire tomorrow.')
+                        : `Neglecting routine adjustments leads to Pitta fire accumulation and Vata wind scatter. Resting heart rate is projected to climb, lowering digestive Agni scores to ${Math.round(agni - 5)}%.`}
                     </Text>
                   </View>
                 </View>
@@ -622,17 +760,17 @@ export default function DigitalTwinScreen() {
 
               {/* RECOMMENDATIONS (Aggravating & Pacifying lists) */}
               {((currentDosha?.explanationSummary?.aggravating?.length || 0) + (currentDosha?.explanationSummary?.pacifying?.length || 0) > 0) && (
-                <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl">
-                  <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-4">Constitutional Recommendations</Text>
+                <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl shadow-sm shadow-[#E4E1D8]/20">
+                  <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono mb-4">Constitutional Recommendations</Text>
                   
                   {currentDosha?.explanationSummary?.aggravating && currentDosha.explanationSummary.aggravating.length > 0 && (
                     <View className="mb-4">
-                      <Text className="text-orange-400 text-xs font-bold mb-2">⚠️ Factors Aggravating Your System Today</Text>
+                      <Text className="text-orange-500 text-xs font-bold mb-2">⚠️ Factors Aggravating Your System Today</Text>
                       <View className="space-y-2">
                         {currentDosha.explanationSummary.aggravating.map((agg, idx) => (
                           <View key={idx} className="flex-row items-start pl-1">
                             <Text className="text-orange-400/80 mr-2 mt-0.5">•</Text>
-                            <Text className="text-slate-300 text-xs leading-relaxed flex-1">{agg}</Text>
+                            <Text className="text-slate-600 text-xs leading-relaxed flex-1">{agg}</Text>
                           </View>
                         ))}
                       </View>
@@ -641,12 +779,12 @@ export default function DigitalTwinScreen() {
 
                   {currentDosha?.explanationSummary?.pacifying && currentDosha.explanationSummary.pacifying.length > 0 && (
                     <View>
-                      <Text className="text-emerald-400 text-xs font-bold mb-2">✅ Cooling & Pacifying Guidelines</Text>
+                      <Text className="text-[#607C64] text-xs font-bold mb-2">✅ Cooling & Pacifying Guidelines</Text>
                       <View className="space-y-2">
                         {currentDosha.explanationSummary.pacifying.map((pac, idx) => (
                           <View key={idx} className="flex-row items-start pl-1">
-                            <Text className="text-emerald-400/80 mr-2 mt-0.5">•</Text>
-                            <Text className="text-slate-300 text-xs leading-relaxed flex-1">{pac}</Text>
+                            <Text className="text-[#607C64]/80 mr-2 mt-0.5">•</Text>
+                            <Text className="text-slate-650 text-xs leading-relaxed flex-1">{pac}</Text>
                           </View>
                         ))}
                       </View>
@@ -656,24 +794,26 @@ export default function DigitalTwinScreen() {
               )}
 
               {/* HISTORICAL TRENDS TIMELINE */}
-              <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl">
-                <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-4">Historical Elements Trend</Text>
+              <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl shadow-sm shadow-[#E4E1D8]/20">
+                <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono mb-4">Historical Elements Trend</Text>
                 
                 <View className="space-y-3">
                   {doshaHistory.length === 0 ? (
-                    <Text className="text-emerald-400/50 text-xs italic pl-1">No historical dosha records logged.</Text>
+                    <Text className="text-slate-500 text-xs italic pl-1">No historical dosha records logged.</Text>
                   ) : (
                     doshaHistory.slice(0, 4).map((record, index) => (
-                      <View key={index} className="flex-row justify-between items-center bg-[#172722]/40 border border-[#1f372f] p-4 rounded-2xl">
+                      <View key={index} className="flex-row justify-between items-center bg-[#F5F2EA]/40 border border-[#E4E1D8] p-4 rounded-2xl">
                         <View>
-                          <Text className="text-white text-xs font-bold font-serif">{new Date(record.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
-                          <Text className="text-emerald-400 text-[9px] mt-1 font-mono uppercase tracking-wider">
+                          <Text className="text-[#2E3A2F] text-xs font-bold font-serif">{new Date(record.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
+                          <Text className="text-[#607C64] text-[9px] mt-1 font-mono uppercase tracking-wider">
                             {record.vata_percentage > 38 ? 'Vata High' : record.pitta_percentage > 38 ? 'Pitta High' : record.kapha_percentage > 38 ? 'Kapha High' : 'Aligned'}
                           </Text>
                         </View>
-                        <Text className="text-slate-300 text-xs font-bold font-mono">
-                          V:{Math.round(record.vata_percentage)}% | P:{Math.round(record.pitta_percentage)}% | K:{Math.round(record.kapha_percentage)}%
-                        </Text>
+                        {mode === 'evidence' && (
+                          <Text className="text-[#2E3A2F] text-xs font-bold font-mono">
+                            V:{Math.round(record.vata_percentage)}% | P:{Math.round(record.pitta_percentage)}% | K:{Math.round(record.kapha_percentage)}%
+                          </Text>
+                        )}
                       </View>
                     ))
                   )}
@@ -689,36 +829,53 @@ export default function DigitalTwinScreen() {
               {/* ========================================================================= */}
               {/* AGNI METABOLIC FIRE PREMIUM WELLNESS CARD */}
               {/* ========================================================================= */}
-              <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl relative overflow-hidden">
+              <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl relative overflow-hidden shadow-sm shadow-[#E4E1D8]/20">
                 <View className="absolute right-0 top-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
                 
                 {/* Header Row */}
                 <View className="flex-row justify-between items-center mb-6">
                   <View className="flex-row items-center flex-1 mr-4">
-                    <PulsingMetricRing score={agniAnalysis.score} color="#fbbf24" iconName="flame" />
+                    <PulsingMetricRing score={agniAnalysis.score} color="#C07A65" iconName="flame" />
                     <View className="ml-4 flex-1">
-                      <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono">Metabolism State</Text>
-                      <Text className="text-white text-lg font-serif font-bold mt-0.5">{agniAnalysis.state}</Text>
+                      <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono">Metabolism State</Text>
+                      <Text className="text-[#2E3A2F] text-base font-serif font-bold mt-0.5">
+                        {mode === 'wellness' 
+                          ? getLocalizedAgni(agniAnalysis.score, locale).label 
+                          : agniAnalysis.state}
+                      </Text>
                     </View>
                   </View>
+                  <TouchableOpacity 
+                    onPress={() => setSelectedConcept('agni')}
+                    className="bg-[#F2EFE8] border border-[#E4E1D8] px-3 py-1.5 rounded-xl active:bg-[#F2EFE8]/75"
+                  >
+                    <Text className="text-[#607C64] text-[8px] font-bold uppercase font-mono">Learn Why</Text>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Current Status Description */}
-                <Text className="text-white text-sm font-serif font-medium leading-snug mb-3">
+                <Text className="text-[#2E3A2F] text-sm font-serif font-black mb-3">
                   Current Status
                 </Text>
-                <Text className="text-slate-300 text-xs leading-relaxed mb-4">
-                  {agniAnalysis.reason}
+                <Text className="text-slate-650 text-xs leading-relaxed mb-4">
+                  {mode === 'wellness' 
+                    ? getLocalizedAgni(agniAnalysis.score, locale).desc 
+                    : agniAnalysis.reason}
                 </Text>
 
                 {/* Trend Summary */}
-                <View className="bg-[#172722]/50 border border-[#1f372f] p-4 rounded-2xl mb-4">
-                  <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-wider font-mono mb-1">Metabolic Trend</Text>
-                  <Text className="text-slate-300 text-xs leading-relaxed">
+                <View className="bg-[#F5F2EA] border border-[#E4E1D8] p-4 rounded-2xl mb-4">
+                  <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono mb-1">Metabolic Trend</Text>
+                  <Text className="text-slate-600 text-xs leading-relaxed">
                     {(() => {
-                      if (agniHistory.length === 0) return 'Baseline metabolism calibrated. Sync daily telemetry to record trends.';
+                      if (agniHistory.length === 0) return locale === 'sa' ? 'Calibrating. Pratidinaṁ sync kuru.' : 'Baseline metabolism calibrated. Sync daily telemetry to record trends.';
                       const avg = Math.round(agniHistory.reduce((acc, r) => acc + r.agni_score, 0) / agniHistory.length);
                       const diff = Math.round(agniAnalysis.score - avg);
+                      if (mode === 'wellness') {
+                        if (diff > 5) return locale === 'sa' ? 'Tava pācana-kriyā uṣṇā sakriyā ca asti.' : 'Your metabolism is currently running slightly more active and warmer than your baseline average.';
+                        if (diff < -5) return locale === 'sa' ? 'Tava pācana-kriyā mandā mandāgniḥ ca asti.' : 'Your metabolism is running slightly slower than your baseline average today.';
+                        return locale === 'sa' ? 'Tava pācana-kriyā samāgniḥ sama-sthitau asti.' : 'Your metabolic fire is stable and balanced, matching your baseline average.';
+                      }
                       if (diff > 0) return `Metabolism is elevated by ${diff}% above your baseline average (${avg}%).`;
                       if (diff < 0) return `Metabolism is running ${Math.abs(diff)}% slower than your baseline average (${avg}%).`;
                       return `Metabolic fire is stable, matching your historical average of ${avg}%.`;
@@ -729,62 +886,74 @@ export default function DigitalTwinScreen() {
                 {/* Reason Details (Strongest vs Weakest) */}
                 <View className="flex-row space-x-3 mb-4">
                   {/* Strongest */}
-                  <View className="flex-1 bg-emerald-950/20 border border-emerald-900/30 p-3.5 rounded-2xl">
-                    <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-wider font-mono">Peaking Factor</Text>
-                    <Text className="text-white text-xs font-bold mt-1.5">{agniAnalysis.strongest.name}</Text>
-                    <Text className="text-emerald-300 font-mono text-[10px] mt-0.5">{agniAnalysis.strongest.score}% Efficiency</Text>
+                  <View className="flex-1 bg-emerald-500/5 border border-emerald-500/10 p-3.5 rounded-2xl">
+                    <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono">Peaking Factor</Text>
+                    <Text className="text-[#2E3A2F] text-xs font-bold mt-1.5">{agniAnalysis.strongest.name}</Text>
+                    <Text className="text-emerald-600 font-mono text-[10px] mt-0.5">
+                      {mode === 'wellness' 
+                        ? (locale === 'sa' ? 'Samyak Aligned' : 'Optimal Alignment') 
+                        : `${agniAnalysis.strongest.score}% Efficiency`}
+                    </Text>
                   </View>
                   
                   {/* Weakest */}
-                  <View className="flex-1 bg-red-950/15 border border-red-900/25 p-3.5 rounded-2xl">
-                    <Text className="text-red-400 text-[9px] uppercase font-bold tracking-wider font-mono">Impaired Factor</Text>
-                    <Text className="text-white text-xs font-bold mt-1.5">{agniAnalysis.weakest.name}</Text>
-                    <Text className="text-red-300 font-mono text-[10px] mt-0.5">{agniAnalysis.weakest.score}% Efficiency</Text>
+                  <View className="flex-1 bg-rose-500/5 border border-rose-500/10 p-3.5 rounded-2xl">
+                    <Text className="text-rose-700 text-[9px] uppercase font-bold tracking-wider font-mono">Impaired Factor</Text>
+                    <Text className="text-[#2E3A2F] text-xs font-bold mt-1.5">{agniAnalysis.weakest.name}</Text>
+                    <Text className="text-rose-600 font-mono text-[10px] mt-0.5">
+                      {mode === 'wellness' 
+                        ? (locale === 'sa' ? 'Dhyāna-āvaśyakam' : 'Needs Attention') 
+                        : `${agniAnalysis.weakest.score}% Efficiency`}
+                    </Text>
                   </View>
                 </View>
 
                 {/* Expected Improvement */}
-                <View className="bg-amber-950/20 border border-amber-900/25 p-4 rounded-2xl mb-4">
-                  <Text className="text-amber-400 text-[9px] uppercase font-bold tracking-wider font-mono mb-1">Expected Improvement</Text>
-                  <Text className="text-slate-300 text-xs leading-relaxed">
-                    {agniAnalysis.expectedImprovement}
+                <View className="bg-[#F5F2EA] border border-[#E4E1D8] p-4 rounded-2xl mb-4">
+                  <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono mb-1">Expected Improvement</Text>
+                  <Text className="text-slate-600 text-xs leading-relaxed">
+                    {mode === 'wellness' 
+                      ? (locale === 'sa' 
+                          ? 'Svastha-bhojanena ojo-balaṁ vardhiṣyate.' 
+                          : 'Correcting your focus issues tomorrow will stabilize digestion and elevate core energy levels.') 
+                      : agniAnalysis.expectedImprovement}
                   </Text>
                 </View>
 
                 {/* Recommendations */}
-                <View className="bg-[#172722]/40 border border-[#1f372f] p-4.5 rounded-2xl">
+                <View className="bg-[#F5F2EA]/40 border border-[#E4E1D8] p-4.5 rounded-2xl">
                   <View className="flex-row justify-between items-center mb-2">
-                    <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider font-mono">Metabolic Directives</Text>
+                    <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-wider font-mono">Metabolic Directives</Text>
                     <TouchableOpacity
                       onPress={() => handleOpenExplanation(agniAnalysis.recommendation)}
-                      className="bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-lg active:bg-emerald-500/20"
+                      className="bg-[#F2EFE8] border border-[#E4E1D8] px-2.5 py-1 rounded-lg active:bg-[#F2EFE8]/80"
                     >
-                      <Text className="text-emerald-400 font-bold text-[8px] tracking-wider">WHY?</Text>
+                      <Text className="text-[#607C64] font-bold text-[8px] tracking-wider">WHY?</Text>
                     </TouchableOpacity>
                   </View>
-                  <Text className="text-slate-300 text-xs leading-relaxed">{agniAnalysis.recommendation}</Text>
+                  <Text className="text-slate-650 text-xs leading-relaxed">{agniAnalysis.recommendation}</Text>
                 </View>
 
               </View>
 
               {/* Daily Metabolic Timeline */}
               {agniAnalysis.timeline.length > 0 && (
-                <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl">
-                  <Text className="text-white text-sm font-serif font-bold mb-4 flex-row items-center">
-                    <Ionicons name="git-commit-outline" size={16} color="#10b981" /> Daily Metabolic Timeline
+                <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl shadow-sm shadow-[#E4E1D8]/20">
+                  <Text className="text-[#2E3A2F] text-sm font-serif font-black mb-4 flex-row items-center">
+                    <Ionicons name="git-commit-outline" size={16} color="#607C64" /> Daily Metabolic Timeline
                   </Text>
 
                   <View className="space-y-4 pl-1 relative">
-                    <View className="absolute left-[9px] top-1.5 bottom-1.5 w-[1px] bg-[#1f372f]" />
+                    <View className="absolute left-[9px] top-1.5 bottom-1.5 w-[1px] bg-[#E4E1D8]" />
                     {agniAnalysis.timeline.map((item, idx) => (
                       <View key={idx} className="flex-row items-start">
-                        <View className="w-[10px] h-[10px] rounded-full bg-amber-400 border-2 border-emerald-950 z-10 mr-3 mt-1.5" />
-                        <View className="flex-1 bg-[#172722]/20 border border-[#1f372f]/40 p-3 rounded-2xl">
+                        <View className="w-[10px] h-[10px] rounded-full bg-amber-400 border-2 border-white z-10 mr-3 mt-1.5" />
+                        <View className="flex-1 bg-[#F5F2EA]/40 border border-[#E4E1D8] p-3 rounded-2xl">
                           <View className="flex-row justify-between">
-                            <Text className="text-white text-xs font-bold">{item.event}</Text>
-                            <Text className="text-emerald-400 text-[9px] font-mono mt-0.5">{item.time}</Text>
+                            <Text className="text-[#2E3A2F] text-xs font-bold">{item.event}</Text>
+                            <Text className="text-[#607C64] text-[9px] font-mono mt-0.5">{item.time}</Text>
                           </View>
-                          <Text className="text-slate-300 text-[10px] mt-1 leading-relaxed">{item.impact}</Text>
+                          <Text className="text-slate-500 text-[10px] mt-1 leading-relaxed">{item.impact}</Text>
                         </View>
                       </View>
                     ))}
@@ -796,36 +965,53 @@ export default function DigitalTwinScreen() {
               {/* ========================================================================= */}
               {/* OJAS VITALITY SHIELD PREMIUM WELLNESS CARD */}
               {/* ========================================================================= */}
-              <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl relative overflow-hidden">
+              <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl relative overflow-hidden shadow-sm shadow-[#E4E1D8]/20">
                 <View className="absolute right-0 top-0 w-24 h-24 bg-violet-500/5 rounded-full blur-xl pointer-events-none" />
                 
                 {/* Header Row */}
                 <View className="flex-row justify-between items-center mb-6">
                   <View className="flex-row items-center flex-1 mr-4">
-                    <PulsingMetricRing score={ojasAnalysis.score} color="#c084fc" iconName="shield-checkmark" />
+                    <PulsingMetricRing score={ojasAnalysis.score} color="#7D9C83" iconName="shield-checkmark" />
                     <View className="ml-4 flex-1">
-                      <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono">Immunity Shield</Text>
-                      <Text className="text-white text-lg font-serif font-bold mt-0.5">{ojasAnalysis.state?.replace(' Ojas', '')}</Text>
+                      <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono">Immunity Shield</Text>
+                      <Text className="text-[#2E3A2F] text-base font-serif font-bold mt-0.5">
+                        {mode === 'wellness' 
+                          ? getLocalizedOjas(ojasAnalysis.score, locale).label 
+                          : ojasAnalysis.state?.replace(' Ojas', '')}
+                      </Text>
                     </View>
                   </View>
+                  <TouchableOpacity 
+                    onPress={() => setSelectedConcept('ojas')}
+                    className="bg-[#F2EFE8] border border-[#E4E1D8] px-3 py-1.5 rounded-xl active:bg-[#F2EFE8]/75"
+                  >
+                    <Text className="text-[#607C64] text-[8px] font-bold uppercase font-mono">Learn Why</Text>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Current Status Description */}
-                <Text className="text-white text-sm font-serif font-medium leading-snug mb-3">
+                <Text className="text-[#2E3A2F] text-sm font-serif font-black mb-3">
                   Current Status
                 </Text>
-                <Text className="text-slate-300 text-xs leading-relaxed mb-4">
-                  {ojasAnalysis.reason}
+                <Text className="text-slate-650 text-xs leading-relaxed mb-4">
+                  {mode === 'wellness' 
+                    ? getLocalizedOjas(ojasAnalysis.score, locale).desc 
+                    : ojasAnalysis.reason}
                 </Text>
 
                 {/* Trend Summary */}
-                <View className="bg-[#172722]/50 border border-[#1f372f] p-4 rounded-2xl mb-4">
-                  <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-wider font-mono mb-1">Immune Trend</Text>
-                  <Text className="text-slate-300 text-xs leading-relaxed">
+                <View className="bg-[#F5F2EA] border border-[#E4E1D8] p-4 rounded-2xl mb-4">
+                  <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono mb-1">Immune Trend</Text>
+                  <Text className="text-slate-600 text-xs leading-relaxed">
                     {(() => {
-                      if (ojasHistory.length === 0) return 'Vitality tracking initialized. Sync daily biosensors to map immune reserves.';
+                      if (ojasHistory.length === 0) return locale === 'sa' ? 'Ojo-māpanaṁ. Daily sync kuru.' : 'Vitality tracking initialized. Sync daily biosensors to map immune reserves.';
                       const avg = Math.round(ojasHistory.reduce((acc, r) => acc + r.ojas_score, 0) / ojasHistory.length);
                       const diff = Math.round(ojasAnalysis.score - avg);
+                      if (mode === 'wellness') {
+                        if (diff > 5) return locale === 'sa' ? 'Tava ojo-balaṁ sudṛḍhaṁ pūrva-vat prabalam asti.' : 'Your cellular shield and physical vitality are stronger than your baseline average today.';
+                        if (diff < -5) return locale === 'sa' ? 'Tava ojo-kṣayaḥ viśrāmasya āvaśyakatā pradarśayati.' : 'Your cellular shield is slightly depleted, suggesting a greater need for physical rest today.';
+                        return locale === 'sa' ? 'Tava ojo-balaṁ sthiraṁ sama-sthitau asti.' : 'Your immune vitality is stable and steady, matching your baseline average.';
+                      }
                       if (diff > 0) return `Cellular shield resilience is ${diff}% higher than your baseline average (${avg}%).`;
                       if (diff < 0) return `Cellular shield resilience is ${Math.abs(diff)}% lower than your baseline average (${avg}%).`;
                       return `Immune shield remains stable, matching your historical average of ${avg}%.`;
@@ -836,85 +1022,105 @@ export default function DigitalTwinScreen() {
                 {/* Explainability Metrics Grid */}
                 <View className="flex-row flex-wrap gap-2.5 mb-4">
                   {/* Vitality Card */}
-                  <View className="flex-[1_0_45%] bg-[#172722]/45 border border-[#1f372f] p-3.5 rounded-2xl">
+                  <View className="flex-[1_0_45%] bg-[#F5F2EA]/45 border border-[#E4E1D8] p-3.5 rounded-2xl">
                     <View className="flex-row justify-between items-center mb-1">
-                      <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-wider font-mono">Tissue Reserve</Text>
-                      <Ionicons name="leaf-outline" size={12} color="#34d399" />
+                      <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono">Tissue Reserve</Text>
+                      <Ionicons name="leaf-outline" size={12} color="#7D9C83" />
                     </View>
-                    <Text className="text-white text-base font-bold font-mono">{ojasAnalysis.vitality}%</Text>
-                    <Text className="text-slate-300 text-[8px] mt-0.5">Physical tissue reserve</Text>
+                    <Text className="text-[#2E3A2F] text-base font-bold font-mono">
+                      {mode === 'wellness' 
+                        ? (ojasAnalysis.vitality >= 80 ? (locale === 'sa' ? 'Pratibhā' : 'Excellent') : ojasAnalysis.vitality >= 60 ? (locale === 'sa' ? 'Sthira' : 'Steady') : (locale === 'sa' ? 'Manda' : 'Recharging')) 
+                        : `${ojasAnalysis.vitality}%`}
+                    </Text>
+                    <Text className="text-slate-500 text-[8px] mt-0.5">Physical tissue reserve</Text>
                   </View>
 
                   {/* Recovery Card */}
-                  <View className="flex-[1_0_45%] bg-[#172722]/45 border border-[#1f372f] p-3.5 rounded-2xl">
+                  <View className="flex-[1_0_45%] bg-[#F5F2EA]/45 border border-[#E4E1D8] p-3.5 rounded-2xl">
                     <View className="flex-row justify-between items-center mb-1">
-                      <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-wider font-mono">HRV Recovery</Text>
-                      <Ionicons name="pulse" size={12} color="#c084fc" />
+                      <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono">HRV Recovery</Text>
+                      <Ionicons name="pulse" size={12} color="#5C788A" />
                     </View>
-                    <Text className="text-white text-base font-bold font-mono">{ojasAnalysis.recovery}%</Text>
-                    <Text className="text-slate-300 text-[8px] mt-0.5">Autonomic wellness trend</Text>
+                    <Text className="text-[#2E3A2F] text-base font-bold font-mono">
+                      {mode === 'wellness' 
+                        ? (ojasAnalysis.recovery >= 80 ? (locale === 'sa' ? 'Pratibhā' : 'Excellent') : ojasAnalysis.recovery >= 60 ? (locale === 'sa' ? 'Sthira' : 'Steady') : (locale === 'sa' ? 'Manda' : 'Recharging')) 
+                        : `${ojasAnalysis.recovery}%`}
+                    </Text>
+                    <Text className="text-slate-500 text-[8px] mt-0.5">Autonomic wellness trend</Text>
                   </View>
 
                   {/* Mental Wellness */}
-                  <View className="flex-[1_0_45%] bg-[#172722]/45 border border-[#1f372f] p-3.5 rounded-2xl">
+                  <View className="flex-[1_0_45%] bg-[#F5F2EA]/45 border border-[#E4E1D8] p-3.5 rounded-2xl">
                     <View className="flex-row justify-between items-center mb-1">
-                      <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-wider font-mono">Stress Index</Text>
-                      <Ionicons name="sunny-outline" size={12} color="#fbbf24" />
+                      <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono">Stress Index</Text>
+                      <Ionicons name="sunny-outline" size={12} color="#C07A65" />
                     </View>
-                    <Text className="text-white text-base font-bold font-mono">{ojasAnalysis.mentalWellness}%</Text>
-                    <Text className="text-slate-300 text-[8px] mt-0.5">Circadian sleep & stress</Text>
+                    <Text className="text-[#2E3A2F] text-base font-bold font-mono">
+                      {mode === 'wellness' 
+                        ? (ojasAnalysis.mentalWellness >= 80 ? (locale === 'sa' ? 'Pratibhā' : 'Excellent') : ojasAnalysis.mentalWellness >= 60 ? (locale === 'sa' ? 'Sthira' : 'Steady') : (locale === 'sa' ? 'Manda' : 'Recharging')) 
+                        : `${ojasAnalysis.mentalWellness}%`}
+                    </Text>
+                    <Text className="text-slate-500 text-[8px] mt-0.5">Circadian sleep & stress</Text>
                   </View>
 
                   {/* Consistency */}
-                  <View className="flex-[1_0_45%] bg-[#172722]/45 border border-[#1f372f] p-3.5 rounded-2xl">
+                  <View className="flex-[1_0_45%] bg-[#F5F2EA]/45 border border-[#E4E1D8] p-3.5 rounded-2xl">
                     <View className="flex-row justify-between items-center mb-1">
-                      <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-wider font-mono">Consistency</Text>
-                      <Ionicons name="bar-chart-outline" size={12} color="#10b981" />
+                      <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono">Consistency</Text>
+                      <Ionicons name="bar-chart-outline" size={12} color="#7D9C83" />
                     </View>
-                    <Text className="text-white text-base font-bold font-mono">{ojasAnalysis.consistency}%</Text>
-                    <Text className="text-slate-300 text-[8px] mt-0.5">Routine logging consistency</Text>
+                    <Text className="text-[#2E3A2F] text-base font-bold font-mono">
+                      {mode === 'wellness' 
+                        ? (ojasAnalysis.consistency >= 80 ? (locale === 'sa' ? 'Pratibhā' : 'Excellent') : ojasAnalysis.consistency >= 60 ? (locale === 'sa' ? 'Sthira' : 'Steady') : (locale === 'sa' ? 'Manda' : 'Recharging')) 
+                        : `${ojasAnalysis.consistency}%`}
+                    </Text>
+                    <Text className="text-slate-500 text-[8px] mt-0.5">Routine logging consistency</Text>
                   </View>
                 </View>
 
                 {/* Expected Improvement */}
-                <View className="bg-violet-950/20 border border-violet-900/25 p-4 rounded-2xl mb-4">
-                  <Text className="text-violet-400 text-[9px] uppercase font-bold tracking-wider font-mono mb-1">Expected Improvement</Text>
-                  <Text className="text-slate-300 text-xs leading-relaxed">{ojasAnalysis.insight}</Text>
+                <View className="bg-violet-500/5 border border-violet-500/10 p-4 rounded-2xl mb-4">
+                  <Text className="text-violet-700 text-[9px] uppercase font-bold tracking-wider font-mono mb-1">Expected Improvement</Text>
+                  <Text className="text-slate-600 text-xs leading-relaxed">{ojasAnalysis.insight}</Text>
                 </View>
 
                 {/* Recommendations */}
-                <View className="bg-[#172722]/40 border border-[#1f372f] p-4.5 rounded-2xl">
+                <View className="bg-[#F5F2EA]/40 border border-[#E4E1D8] p-4.5 rounded-2xl">
                   <View className="flex-row justify-between items-center mb-2">
-                    <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider font-mono">Resilience Directives</Text>
+                    <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-wider font-mono">Resilience Directives</Text>
                     <TouchableOpacity
                       onPress={() => handleOpenExplanation(ojasAnalysis.recommendation)}
-                      className="bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-lg active:bg-emerald-500/20"
+                      className="bg-[#F2EFE8] border border-[#E4E1D8] px-2.5 py-1 rounded-lg active:bg-[#F2EFE8]/80"
                     >
-                      <Text className="text-emerald-400 font-bold text-[8px] tracking-wider">WHY?</Text>
+                      <Text className="text-[#607C64] font-bold text-[8px] tracking-wider">WHY?</Text>
                     </TouchableOpacity>
                   </View>
-                  <Text className="text-slate-300 text-xs leading-relaxed">{ojasAnalysis.recommendation}</Text>
+                  <Text className="text-slate-650 text-xs leading-relaxed">{ojasAnalysis.recommendation}</Text>
                 </View>
 
               </View>
 
               {/* Weekly Ojas Trend */}
-              <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl">
-                <Text className="text-white text-sm font-serif font-bold mb-4 flex-row items-center">
-                  <Ionicons name="bar-chart-outline" size={16} color="#10b981" /> Weekly Ojas History
+              <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl shadow-sm shadow-[#E4E1D8]/20">
+                <Text className="text-[#2E3A2F] text-sm font-serif font-black mb-4 flex-row items-center">
+                  <Ionicons name="bar-chart-outline" size={16} color="#607C64" /> Weekly Ojas History
                 </Text>
 
                 <View className="space-y-3">
                   {ojasHistory.length === 0 ? (
-                    <Text className="text-emerald-400/50 text-xs italic pl-1">No historical ojas records logged.</Text>
+                    <Text className="text-slate-500 text-xs italic pl-1">No historical ojas records logged.</Text>
                   ) : (
                     ojasHistory.slice(0, 4).map((record, index) => (
-                      <View key={index} className="flex-row justify-between items-center bg-[#172722]/40 border border-[#1f372f] p-4 rounded-2xl">
+                      <View key={index} className="flex-row justify-between items-center bg-[#F5F2EA]/40 border border-[#E4E1D8] p-4 rounded-2xl">
                         <View>
-                          <Text className="text-white text-xs font-bold font-serif">{new Date(record.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
-                          <Text className="text-emerald-400 text-[9px] mt-1 font-mono uppercase tracking-wider">{record.ojas_state}</Text>
+                          <Text className="text-[#2E3A2F] text-xs font-bold font-serif">{new Date(record.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
+                          <Text className="text-[#607C64] text-[9px] mt-1 font-mono uppercase tracking-wider">{record.ojas_state}</Text>
                         </View>
-                        <Text className="text-violet-300 text-xs font-bold font-mono">{record.ojas_score}%</Text>
+                        <Text className="text-violet-700 text-xs font-bold font-mono">
+                          {mode === 'wellness' 
+                            ? (record.ojas_score >= 80 ? 'Excellent' : record.ojas_score >= 60 ? 'Steady' : 'Recharging') 
+                            : `${record.ojas_score}%`}
+                        </Text>
                       </View>
                     ))
                   )}
@@ -932,6 +1138,12 @@ export default function DigitalTwinScreen() {
           visible={explanationVisible}
           onClose={() => setExplanationVisible(false)}
           context={explanationContext}
+        />
+
+        <AyurConceptExplanationSheet
+          visible={!!selectedConcept}
+          onClose={() => setSelectedConcept(null)}
+          conceptId={selectedConcept}
         />
       </LinearGradient>
     </SafeAreaView>
@@ -979,26 +1191,26 @@ const DoshaWheel = React.memo(function DoshaWheel({ vata, pitta, kapha }: { vata
 
   const maxDosha = Math.max(vata, pitta, kapha);
   const dominantName = maxDosha === vata ? 'Vata' : maxDosha === pitta ? 'Pitta' : 'Kapha';
-  const dominantColor = maxDosha === vata ? '#38bdf8' : maxDosha === pitta ? '#f97316' : '#14b8a6';
+  const dominantColor = maxDosha === vata ? '#38bdf8' : maxDosha === pitta ? '#f97316' : '#7D9C83';
 
   return (
     <View className="items-center justify-center py-4">
       <View className="w-52 h-52 items-center justify-center relative">
         <View className="absolute items-center z-10">
-          <Text className="text-emerald-400 text-[8px] uppercase font-bold tracking-widest font-mono">Dominant</Text>
+          <Text className="text-[#607C64] text-[8px] uppercase font-bold tracking-widest font-mono">Dominant</Text>
           <Text style={{ color: dominantColor }} className="text-2xl font-serif font-black">{dominantName}</Text>
-          <Text className="text-white text-xs font-bold font-mono mt-0.5">{Math.round(maxDosha)}%</Text>
+          <Text className="text-[#2E3A2F] text-xs font-bold font-mono mt-0.5">{Math.round(maxDosha)}%</Text>
         </View>
 
         <Animated.View style={{ transform: [{ rotate: spin }], position: 'absolute' }}>
           <Svg width="180" height="180" viewBox="0 0 180 180">
-            <Circle cx="90" cy="90" r={rKapha} fill="none" stroke="#132a24" strokeWidth="5.5" />
+            <Circle cx="90" cy="90" r={rKapha} fill="none" stroke="#F2EFE8" strokeWidth="5.5" />
             <Circle
               cx="90"
               cy="90"
               r={rKapha}
               fill="none"
-              stroke="#14b8a6"
+              stroke="#7D9C83"
               strokeWidth="5.5"
               strokeDasharray={cKapha}
               strokeDashoffset={oKapha}
@@ -1010,7 +1222,7 @@ const DoshaWheel = React.memo(function DoshaWheel({ vata, pitta, kapha }: { vata
 
         <Animated.View style={{ transform: [{ rotate: spinReverse }], position: 'absolute' }}>
           <Svg width="180" height="180" viewBox="0 0 180 180">
-            <Circle cx="90" cy="90" r={rPitta} fill="none" stroke="#2e1b12" strokeWidth="5.5" />
+            <Circle cx="90" cy="90" r={rPitta} fill="none" stroke="#F2EFE8" strokeWidth="5.5" />
             <Circle
               cx="90"
               cy="90"
@@ -1028,7 +1240,7 @@ const DoshaWheel = React.memo(function DoshaWheel({ vata, pitta, kapha }: { vata
 
         <Animated.View style={{ transform: [{ rotate: spin }], position: 'absolute' }}>
           <Svg width="180" height="180" viewBox="0 0 180 180">
-            <Circle cx="90" cy="90" r={rVata} fill="none" stroke="#0f2635" strokeWidth="5.5" />
+            <Circle cx="90" cy="90" r={rVata} fill="none" stroke="#F2EFE8" strokeWidth="5.5" />
             <Circle
               cx="90"
               cy="90"
@@ -1048,15 +1260,15 @@ const DoshaWheel = React.memo(function DoshaWheel({ vata, pitta, kapha }: { vata
       <View className="flex-row gap-5 mt-5">
         <View className="flex-row items-center">
           <View className="w-1.5 h-1.5 rounded-full bg-[#38bdf8] mr-1.5" />
-          <Text className="text-slate-300 text-[10px] font-bold font-mono">Vata {Math.round(vata)}%</Text>
+          <Text className="text-slate-650 text-[10px] font-bold font-mono">Vata {Math.round(vata)}%</Text>
         </View>
         <View className="flex-row items-center">
           <View className="w-1.5 h-1.5 rounded-full bg-[#f97316] mr-1.5" />
-          <Text className="text-slate-300 text-[10px] font-bold font-mono">Pitta {Math.round(pitta)}%</Text>
+          <Text className="text-slate-650 text-[10px] font-bold font-mono">Pitta {Math.round(pitta)}%</Text>
         </View>
         <View className="flex-row items-center">
-          <View className="w-1.5 h-1.5 rounded-full bg-[#14b8a6] mr-1.5" />
-          <Text className="text-slate-300 text-[10px] font-bold font-mono">Kapha {Math.round(kapha)}%</Text>
+          <View className="w-1.5 h-1.5 rounded-full bg-[#7D9C83] mr-1.5" />
+          <Text className="text-slate-650 text-[10px] font-bold font-mono">Kapha {Math.round(kapha)}%</Text>
         </View>
       </View>
     </View>
@@ -1102,7 +1314,7 @@ const PulsingMetricRing = React.memo(function PulsingMetricRing({ score, color, 
               cy="34"
               r={radius}
               fill="none"
-              stroke="#0f2620"
+              stroke="#E4E1D8"
               strokeWidth={strokeWidth}
             />
             <Circle

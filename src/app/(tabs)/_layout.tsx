@@ -8,26 +8,26 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#34d399', // Mint / Emerald active state
-        tabBarInactiveTintColor: '#6b7280', // Grey inactive state
+        tabBarActiveTintColor: '#607C64', // Sage Green active state
+        tabBarInactiveTintColor: '#8C958E', // Grey-green inactive state
         tabBarStyle: {
           position: 'absolute',
           bottom: Platform.OS === 'ios' ? 24 : 16,
           left: 16,
           right: 16,
           borderRadius: 24,
-          backgroundColor: 'rgba(3, 20, 16, 0.88)', // Deep space glassmorphism
+          backgroundColor: '#FFFFFF', // Pure white background
           borderTopWidth: 0,
           borderWidth: 1,
-          borderColor: 'rgba(16, 185, 129, 0.15)', // Soft emerald glow border
+          borderColor: '#E4E1D8', // Warm soft border
           height: 68,
           paddingBottom: 8,
           paddingTop: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: 0.4,
-          shadowRadius: 12,
-          elevation: 8,
+          shadowColor: '#2C2D24',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          elevation: 4,
         },
         tabBarLabelStyle: {
           fontSize: 10,
@@ -64,12 +64,24 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="learn"
+        options={{
+          title: 'Learn',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'school' : 'school-outline'} size={21} color={color} />
+          ),
+        }}
+      />
 
       {/* Hidden Screens (Navigate-able but omitted from bottom tab bar) */}
       <Tabs.Screen
         name="coach"
         options={{
-          href: null,
+          title: 'Guru',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'} size={21} color={color} />
+          ),
         }}
       />
       <Tabs.Screen

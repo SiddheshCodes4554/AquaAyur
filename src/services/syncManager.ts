@@ -150,11 +150,18 @@ async function syncTelemetry(userId: string): Promise<void> {
         bpm: Number(log.heart_rate)
       }));
 
-    const tempBatch = batch.map(log => ({
-      user_id: userId,
-      timestamp: log.timestamp,
-      temperature_celsius: log.skin_temperature
-    }));
+    // Filter out temperature readings that do not comply with the Supabase CHECK constraint [30.0, 45.0]
+    // to prevent sync manager crashes, while keeping accurate raw readings on the local device.
+    const tempBatch = batch
+      .filter(log => {
+        const temp = Number(log.skin_temperature);
+        return !isNaN(temp) && temp >= 30.0 && temp <= 45.0;
+      })
+      .map(log => ({
+        user_id: userId,
+        timestamp: log.timestamp,
+        temperature_celsius: Number(log.skin_temperature)
+      }));
 
     const actBatch = batch.map(log => ({
       user_id: userId,
@@ -164,14 +171,18 @@ async function syncTelemetry(userId: string): Promise<void> {
       calories_burned_kcal: Math.round(log.steps * 0.04)
     }));
 
-    // Perform insertions in parallel, skipping heart rate insert if batch is empty
+    // Perform insertions in parallel, skipping inserts if batches are empty
     const insertPromises: Promise<any>[] = [];
     if (hrBatch.length > 0) {
       insertPromises.push(Promise.resolve(supabase.from('heart_rate_logs').insert(hrBatch)));
     } else {
       insertPromises.push(Promise.resolve({ error: null }));
     }
-    insertPromises.push(Promise.resolve(supabase.from('temperature_logs').insert(tempBatch)));
+    if (tempBatch.length > 0) {
+      insertPromises.push(Promise.resolve(supabase.from('temperature_logs').insert(tempBatch)));
+    } else {
+      insertPromises.push(Promise.resolve({ error: null }));
+    }
     insertPromises.push(Promise.resolve(supabase.from('activity_logs').insert(actBatch)));
 
     const [hrRes, tempRes, actRes] = await Promise.all(insertPromises);

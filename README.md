@@ -12,53 +12,119 @@ It merges the ancient medical wisdom of **Ayurveda** (Dosha bio-energetic assess
 
 ---
 
+## 🛠️ Quick Start & Setup Guide
+
+### 📋 Prerequisites
+To run this project, make sure you have the following installed on your machine:
+* **Node.js** (v18 or v20 recommended)
+* **npm** (included with Node.js)
+* **Expo CLI** (run via `npx expo`)
+* **For Native Builds (Android/iOS):**
+  * Android Studio & Android SDK (for Android Emulators/devices)
+  * Xcode & CocoaPods (for iOS Simulators/devices, macOS only)
+  * *Note: Physical Bluetooth (BLE) scanning and connection requires a physical device running a native development build.*
+
+---
+
+### ⚙️ Step 1: Clone & Install Dependencies
+First, clone the repository and install the project dependencies:
+```bash
+npm install
+```
+
+---
+
+### 🔑 Step 2: Environment Configuration
+Create a local `.env` file in the root directory by copying the example template:
+```bash
+cp .env.example .env
+```
+Open the `.env` file and populate it with your configuration credentials:
+```ini
+# Supabase Configuration
+EXPO_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+
+# Groq API Configuration (used for AI Chat, Food Journaling & Report compilation)
+EXPO_PUBLIC_GROQ_API_KEY=gsk_your_groq_api_key
+
+# Clerk Authentication Configuration
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+EXPO_PUBLIC_CLERK_SECRET_KEY=sk_test_...
+```
+
+---
+
+### 🗄️ Step 3: Database Setup (Supabase)
+1. Set up a project on your [Supabase Dashboard](https://supabase.com/).
+2. Open the **SQL Editor** in the Supabase Dashboard.
+3. Copy and run the SQL instructions in [supabase_complete_schema.sql](file:///D:/Projects/Ayurveda/supabase_complete_schema.sql) to provision all tables, columns, indexes, and Row Level Security (RLS) policies.
+4. *(Optional Dev Step)* If you need to disable RLS restrictions during local development to simplify testing, copy and run the SQL commands in [disable_rls_dev.sql](file:///D:/Projects/Ayurveda/disable_rls_dev.sql).
+
+---
+
+### 🔐 Step 4: Authentication Setup (Clerk)
+1. Set up a project on your [Clerk Dashboard](https://dashboard.clerk.com).
+2. Navigate to **JWT Templates** in the Clerk sidebar.
+3. Click **New Template** and select **Supabase**.
+4. Keep the template name as `supabase` to ensure compatibility with the token exchange logic.
+5. Configure sign-in methods (Email/Password, Google OAuth, etc.) as preferred.
+
+---
+
+### 📱 Step 5: Running the App
+
+Depending on your testing needs, choose one of the following methods:
+
+#### Option A: Run in Expo Go (Quickest, Simulates Vitals)
+Since the app features an offline sensor simulator and graceful fallbacks, you can test the dashboard, AI chat, food journaling, and offline synchronization within Expo Go:
+```bash
+# Start the Expo development server
+npm run start
+```
+Scan the displayed QR code with the Expo Go app on your phone ([iOS](https://apps.apple.com/us/app/expo-go/id984021028) / [Android](https://play.google.com/store/apps/details?id=host.exp.exponent)).
+
+#### Option B: Run the Web Version
+```bash
+npm run web
+```
+
+#### Option C: Native Development Build (Required for Real BLE Scanning/Hardware)
+To run with native Bluetooth libraries (`react-native-ble-plx`) and connect to real/simulated hardware devices:
+* **Android Build:**
+  ```bash
+  npm run android
+  ```
+* **iOS Build (macOS and Xcode required):**
+  ```bash
+  npm run ios
+  ```
+
+---
+
 ## 🚀 Key Core Features (Deep-Dive)
 
-### 📊 1. Intelligent Health & Recovery Dashboard
-* **Dynamic Wellness Index:** Calculates a daily Health & Recovery Index dynamically by aggregating the user's last 24-48 hours of average heart rate, skin temperature, and sleep scores.
-* **Trend Indexing:** Compares active metrics against yesterday's benchmarks (e.g. `+4 points vs yesterday`) to show immediate health trajectory.
-* **Ayurvedic Recommendation Engine:** Suggests real-time personalized daily recommendations depending on biometric states (e.g. balancing Pitta if skin temperature rises, or grounding Vata if heart rate fluctuates).
-* **Offline Logger Modals:** Log sleep duration, bedtime, and wake times offline which queue automatically for cloud syncing.
+### 📊 1. Redesigned Premium Insights Dashboard
+* **Health Scores Concentric Rings**: Visualizes a 3x2 grid of custom SVG circular progress rings tracking **Energy**, **Recovery**, **Hydration**, **Sleep**, **Activity**, and **Mind** stillness.
+* **Vital Trends Area & Line Chart**: High-performance SVG area chart displaying 7-day Recovery (green) and Energy (orange) values with smooth visual gradients and axis labels.
+* **Body Balance Progress Card**: Reconstructed Vata (Movement), Pitta (Heat), and Kapha (Stability) metrics as clean horizontal progress bars, complete with a terracotta advisory warning card.
+* **Today's Recommendations Tags**: Interactive capsule buttons for daily habits which open detailed sliding bottom sheets.
+* **Health Forecast & Connected Line Graph**: Showcases direction indicator arrow badges for tomorrow's forecast and a connected node SVG prediction trend chart.
+* **Collapsible Accordions**: Expandable details for "Today vs This Week", "Wellness History" (archived reports), and "Habit Progress".
 
-### 👤 2. Ayurvedic Digital Twin
-* **Bio-Energetic Balances:** Visualizes the dynamic distribution of the user's active **Vata**, **Pitta**, and **Kapha** bio-energies using customized SVG radar and polygon charts.
-* **Agni Metabolic Core Analyzer:** Computes the daily strength of the user's digestive fire (Agni) based on circadian meal timing, diet quality, vitals, hydration levels, physical activity, and sleep.
-* **Ojas Vitality Shield:** Measures the user's physiological immune shield (Ojas) based on heart rate variability (HRV), sleep staging, and hydration consistency.
-* **Interactive Lifestyle Simulation Engine:** Lets users run simulated scenarios (e.g., waking during Brahma Muhurta, eating warm spiced meals, doing yoga, sleeping early) to see the projected impact on their Doshas, Agni, and Ojas before executing them in real life.
-* **AyurExplanationSheet:** Tapping on recommendations reveals clinical rationales contextualized with live biometric data.
+### 🎓 2. Interactive "Learn Ayurveda" Experience
+* **Duolingo-Style Lesson System**: Teach users about Doshas, Vata, Pitta, Kapha, Agni, Ojas, and Dinacharya through 2-minute practical lessons.
+* **Gamified Progress Tracking**: Persistent Zustand store tracking completed lessons, total XP, daily streaks, and unlocked achievements.
+* **Interactive Quizzes**: Multiple-choice quizzes featuring smooth slide card drawers, feedback highlights, and haptic/shake validation effects.
 
-### 🧘 3. Circadian Dinacharya Router & Breathing Coach
-* **Circadian Routine Planner:** Organizes the day into morning, afternoon, and evening phases, providing specific recommendations for Brahma Muhurta Awakening, Ushapan Hydration, solar-peak Ahara (midday meal), Vyayama (exercise), and Nidra (sleep).
-* **Interactive Pranayama Coach:** Guided breathing tool supporting alternate-nostril breathing with a real-time visual progress timer (4s Inhale, 4s Hold, 4s Exhale) to pacify Vata wind and balance the nervous system.
-* **Quick Loggers:** Single-tap logging buttons for sleep and hydration.
+### 📝 3. Concept Explanations & Bottom Sheets
+* **Sliding Bottom Sheets**: Interactive, modal drawers for every single Ayurvedic concept that explain what it means, why it was detected, how it's estimated, and what actions to take.
+* **Lesson Redirects**: Sliding sheets link directly to their corresponding lesson card inside the Learn tab.
 
-### 💬 4. Personal AI Ayurvedic Coach Chat
-* **Conversational Expert:** Chat directly with an AI coach loaded with Ayurvedic texts. It uses Llama3 via Groq to answer dietary, herbal, and daily routine questions.
-* **Structured Cards UI:** Features rich interactive cards displaying custom insights, recommended routines, or recipes.
-* **Automatic Output Sanitizing:** Sanitizes messages by stripping markdown ticks, cleaning trailing tags, parsing raw JSON responses, and converting lists to clean, human-readable bold bullet points.
-
-### 🌐 5. ESP32 Wearable Bluetooth Low Energy Integration
-* **Real-Time Data Streaming:** Connects to the custom AquaAyur wearable to stream live telemetry (Heart Rate, Skin Temperature, Steps, and active Activity state).
-* **Persistent Pairing Profiles:** Persists paired hardware details (MAC address and friendly name) to the backend database.
-* **Manual Autoconnect:** Restores connection to the previously paired wearable immediately on app start or upon explicit trigger via the **Previously Paired Device** dashboard card.
-* **Robust Cancellation Interceptors:** Case-insensitive check filters that catch and suppress native BleError messages when connections are cleanly cancelled or the app context unmounts.
-* **Permissions Module:** Fully handles scan, connect, and legacy location permissions dynamically.
-
-### 🍽️ 6. AI Food Journal & Analysis
-* **Smart Calorie Tracker:** Log foods, meal times (Breakfast, Lunch, Dinner, Snack), and portion sizes.
-* **Ayurvedic Taste & Dosha Mapping:** AI-powered analysis resolves the Ayurvedic taste (Sweet, Sour, Salty, Bitter, Pungent, Astringent) and outlines its positive or negative effects on the user's dominant Dosha.
-* **OCR Scanner:** Features a nutrition label camera scanner to analyze macronutrients (Carbs, Protein, Fat, Fiber) and log entries instantly.
-
-### 💻 7. BLE Virtual Wearable Simulator Lab
-* **Real-Time Simulation Control Panel:** Simulates an active physical wearable transmitting telemetry data packets.
-* **Dosha Imbalance Presets:** Test app behavior under extreme profiles (Vata Out of Balance, Pitta Out of Balance, Kapha Out of Balance, or Healthy Equilibrium).
-* **Physical Scenario Presets:** Pre-programmed setups for Exercise Surge, High Stress/Anxiety, Deep Sleep, and Normal Rest.
-* **Interactive Telemetry Sliders:** Manually adjust Heart Rate, Skin Temperature, Steps, and Activity state variables on the fly.
-
-### 📈 8. Weekly Analytics & Groq Reports
-* **Auto-Compilation:** Checks if the user has biometric logs but no report, and automatically compiles their initial week-long wellness overview using Groq Llama3 analysis.
-* **Historical Trends:** Dynamic line graphs rendering metrics (Heart Rate, Skin Temperature, Steps, Sleep) across the last 7 days.
-* **Baseline Normalization:** Normalizes missing data using overall historical telemetry averages rather than generic hardcoded values.
+### 📖 4. Daily Story Engine & Onboarding
+* **Daily Story compiler**: Formulates a personalized morning story based on biometrics, sleep duration, and hydration.
+* **Welcome Onboarding Card**: Dismissible orientation card helping new users understand how wearable metrics, habits, and Ayurvedic wellness connect.
+* **Body Intelligence Timeline**: Staggered, interactive cause-and-effect timeline diagram linking daily habits, sleep scores, telemetry metrics, and element accumulations.
 
 ---
 
@@ -74,7 +140,7 @@ It merges the ancient medical wisdom of **Ayurveda** (Dosha bio-energetic assess
 | **Supabase JS Client** | Remote database client and authentication interface | `^2.106.2` |
 | **@clerk/clerk-expo** | Secure authentication provider integration | `^2.19.31` |
 | **@groq/sdk** | Connects to high-performance Llama3 endpoints for OCR, chat, and reports | Latest |
-| **react-native-safe-area-context** | SafeArea inset calculators for multiple screen sizes | `~5.7.0` |
+| **react-native-svg** | Renders custom high-fidelity area charts, line graphs, and rings | `~15.2.0` |
 | **react-native-reanimated** | Fluid micro-animations and screen transitions | `4.3.1` |
 
 ---

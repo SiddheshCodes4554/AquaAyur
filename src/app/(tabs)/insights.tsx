@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Circle, Path, Line as SvgLine, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Sharing from 'expo-sharing';
@@ -18,7 +19,14 @@ import { compileAnalyticsReport } from '../../services/analyticsService';
 import { generateDailyBriefing, DailyBriefingSnapshot } from '../../services/dailyIntelligence';
 import { generateHealthPredictions } from '../../services/predictiveEngine';
 import AyurExplanationSheet from '../../components/AyurExplanationSheet';
+import BodyIntelligenceTimeline from '../../components/BodyIntelligenceTimeline';
 import { getExplanationForRecommendation, ExplanationContext } from '../../services/recommendationExplainer';
+import { useExperienceStore } from '../../store/useExperienceStore';
+import { ExperienceSwitch } from '../../components/ExperienceSwitch';
+import { 
+  getLocalizedAgni, 
+  getLocalizedOjas 
+} from '../../services/translationEngine';
 
 interface HealthReportRecord {
   id: string;
@@ -44,6 +52,7 @@ type ChartMetricType = 'pulse' | 'temp' | 'steps' | 'sleep' | 'ojas' | 'agni';
 
 export default function InsightsScreen() {
   const { user, profile } = useAuthStore();
+  const { mode, locale } = useExperienceStore();
   const { heartRateHistory, temperatureHistory, activityHistory, fetchHistory: fetchTelemetryHistory } = useTelemetryStore();
   const { sleepHistory, fetchHistory: fetchSleepHistory } = useSleepStore();
   const { history: agniHistory, fetchHistory: fetchAgniHistory, todayAgni, fetchTodayAgni } = useAgniStore();
@@ -64,6 +73,7 @@ export default function InsightsScreen() {
   const [errorMsg, setErrorMsg] = useState('');
   const [storyInterval, setStoryInterval] = useState<'weekly' | 'monthly'>('weekly');
   const [selectedTimelineDay, setSelectedTimelineDay] = useState(6);
+  const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
 
   const last7DaysData = useMemo(() => {
     const days = [];
@@ -295,9 +305,9 @@ export default function InsightsScreen() {
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return { text: 'text-emerald-400', border: 'border-emerald-500/80', bg: 'bg-emerald-950/80', glow: 'bg-emerald-400/20' };
-    if (score >= 50) return { text: 'text-amber-400', border: 'border-amber-500/80', bg: 'bg-amber-950/50', glow: 'bg-amber-400/10' };
-    return { text: 'text-rose-400', border: 'border-rose-500/80', bg: 'bg-rose-950/50', glow: 'bg-rose-400/10' };
+    if (score >= 80) return { text: 'text-[#607C64]', border: 'border-[#E4E1D8]', bg: 'bg-[#F2EFE8]', glow: 'bg-[#7D9C83]/10' };
+    if (score >= 50) return { text: 'text-amber-700', border: 'border-[#E4E1D8]', bg: 'bg-amber-50', glow: 'bg-amber-500/10' };
+    return { text: 'text-rose-700', border: 'border-[#E4E1D8]', bg: 'bg-rose-50', glow: 'bg-rose-500/10' };
   };
 
   const renderMarkdown = (text: string) => {
@@ -308,20 +318,20 @@ export default function InsightsScreen() {
       if (!cleanLine) return <View key={idx} className="h-2" />;
 
       if (cleanLine.startsWith('###')) {
-        return <Text key={idx} className="text-emerald-300 font-bold text-sm mt-3 mb-1">{cleanLine.replace('###', '').trim()}</Text>;
+        return <Text key={idx} className="text-[#607C64] font-bold text-sm mt-3 mb-1 font-serif">{cleanLine.replace('###', '').trim()}</Text>;
       }
       if (cleanLine.startsWith('##')) {
-        return <Text key={idx} className="text-emerald-200 font-bold text-base mt-4 mb-1.5">{cleanLine.replace('##', '').trim()}</Text>;
+        return <Text key={idx} className="text-[#2E3A2F] font-bold text-base mt-4 mb-1.5 font-serif">{cleanLine.replace('##', '').trim()}</Text>;
       }
       if (cleanLine.startsWith('-') || cleanLine.startsWith('*')) {
         return (
           <View key={idx} className="flex-row items-start py-0.5 pl-1">
-            <Text className="text-emerald-400 mr-2 text-[13px]">•</Text>
-            <Text className="text-emerald-100/90 text-[13px] flex-1 leading-relaxed">{renderBoldSegments(cleanLine.substring(1).trim())}</Text>
+            <Text className="text-[#7D9C83] mr-2 text-[13px]">•</Text>
+            <Text className="text-slate-650 text-[13px] flex-1 leading-relaxed">{renderBoldSegments(cleanLine.substring(1).trim())}</Text>
           </View>
         );
       }
-      return <Text key={idx} className="text-emerald-100/90 text-[13px] leading-relaxed mb-2">{renderBoldSegments(cleanLine)}</Text>;
+      return <Text key={idx} className="text-slate-655 text-[13px] leading-relaxed mb-2 font-serif">{renderBoldSegments(cleanLine)}</Text>;
     });
   };
 
@@ -330,7 +340,7 @@ export default function InsightsScreen() {
     if (parts.length === 1) return text;
     return parts.map((part, index) => {
       if (index % 2 === 1) {
-        return <Text key={index} className="font-bold text-emerald-300">{part}</Text>;
+        return <Text key={index} className="font-bold text-[#2E3A2F]">{part}</Text>;
       }
       return part;
     });
@@ -341,16 +351,15 @@ export default function InsightsScreen() {
     return (
       <View className="mb-3">
         <View className="flex-row justify-between items-center mb-0.5">
-          <Text className="text-emerald-300/60 text-[11px] font-medium">{label}</Text>
-          <Text className="text-white text-xs font-mono font-semibold">{valueStr}</Text>
+          <Text className="text-[#607C64]/70 text-[11px] font-medium font-mono">{label}</Text>
+          <Text className="text-[#2E3A2F] text-xs font-mono font-semibold">{valueStr}</Text>
         </View>
-        <View className="w-full h-1.5 bg-emerald-950/70 rounded-full overflow-hidden border border-emerald-900/30">
+        <View className="w-full h-1.5 bg-[#F2EFE8] rounded-full overflow-hidden border border-[#E4E1D8]/40">
           <View style={{ width: `${pct}%` }} className={`h-full ${colorClass} rounded-full`} />
         </View>
       </View>
     );
   };
-
   const getLast7Days = () => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const result = [];
@@ -469,7 +478,7 @@ export default function InsightsScreen() {
   const sleepPct = sleepVal;
 
   const hydrationPct = Math.min(100, waterTarget > 0 ? Math.round((waterVal / waterTarget) * 100) : 50);
-  const stepsPct = Math.min(100, stepsTarget > 0 ? Math.round((stepsVal / stepsTarget) * 100) : 50);
+const stepsPct = Math.min(100, stepsTarget > 0 ? Math.round((stepsVal / stepsTarget) * 100) : 50);
   let dietPct = 50;
   if (kcalVal > 0) {
     const diff = Math.abs(kcalVal - calorieTarget);
@@ -477,533 +486,320 @@ export default function InsightsScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#020b08' }}>
-      <LinearGradient colors={['#03120f', '#010605']} className="flex-1">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F6F0' }}>
+      <LinearGradient colors={['#F8F6F0', '#F2EFE8']} className="flex-1">
         {/* Header */}
-        <View className="px-6 py-4 flex-row items-center justify-between border-b border-emerald-900/35">
-          <View>
-            <Text className="text-white text-lg font-serif font-black">Ayurvedic Oracle</Text>
-            <Text className="text-emerald-400/50 text-[10px] uppercase font-bold tracking-wider">Imbalance Forecasting & Trends</Text>
-          </View>
-          <TouchableOpacity
-            onPress={compileNewReport}
-            disabled={compiling || loading}
-            className="bg-emerald-500 px-4 py-2 rounded-xl active:bg-emerald-600 flex-row items-center shadow-lg shadow-emerald-500/15"
-          >
-            {compiling ? (
-              <ActivityIndicator size="small" color="#022c22" />
-            ) : (
-              <>
-                <Ionicons name="sparkles" size={14} color="#022c22" className="mr-1" />
-                <Text className="text-emerald-950 font-bold text-xs">Forecast</Text>
-              </>
-            )}
-          </TouchableOpacity>
+        <View className="px-6 py-4 border-b border-[#E4E1D8]">
+          <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-widest font-mono">ORACLE - INSIGHTS</Text>
+          <Text className="text-[#2E3A2F] text-2xl font-serif font-black mt-0.5">Good morning, {profile?.first_name || 'Siddhesh'}</Text>
         </View>
 
         <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 110 }} className="px-6 py-4" showsVerticalScrollIndicator={false}>
-          {errorMsg ? (
-            <View className="bg-rose-950/40 border border-rose-800/40 p-4 rounded-xl mb-4 flex-row items-center">
-              <Ionicons name="alert-circle" size={18} color="#f87171" className="mr-2" />
-              <Text className="text-rose-200 text-xs flex-1">{errorMsg}</Text>
-            </View>
-          ) : null}
-
           {/* ================= SECTION: DUAL INTELLIGENCE BRIEFING ================= */}
           {todayBriefing ? (
-            <View className="bg-emerald-950/20 border border-emerald-800/35 p-5 rounded-3xl mb-6 shadow-xl shadow-emerald-950/20">
+            <View className="bg-white border border-[#E4E1D8] p-5 rounded-3xl mb-6 shadow-sm shadow-[#E4E1D8]/20">
               <View className="flex-row justify-between items-center mb-4">
                 <View className="flex-row items-center">
-                  <Ionicons name="sparkles" size={18} color="#10b981" style={{ marginRight: 8 }} />
-                  <Text className="text-white text-base font-bold">Daily Intelligence Briefing</Text>
+                  <Ionicons name="sunny-outline" size={18} color="#607C64" style={{ marginRight: 8 }} />
+                  <Text className="text-[#2E3A2F] text-sm font-serif font-black">Today's Briefing</Text>
                 </View>
                 <TouchableOpacity
                   onPress={compileTodayBriefing}
                   disabled={briefingLoading}
-                  className="bg-emerald-950 px-3 py-1.5 rounded-xl border border-emerald-900/30 flex-row items-center"
+                  className="bg-[#F2EFE8] px-3 py-1.5 rounded-xl border border-[#E4E1D8] flex-row items-center"
                 >
                   {briefingLoading ? (
-                    <ActivityIndicator size="small" color="#10b981" />
+                    <ActivityIndicator size="small" color="#607C64" />
                   ) : (
                     <>
-                      <Ionicons name="refresh-outline" size={13} color="#34d399" style={{ marginRight: 4 }} />
-                      <Text className="text-emerald-400 text-[10px] font-bold">Re-Calibrate</Text>
+                      <Ionicons name="refresh-outline" size={13} color="#607C64" style={{ marginRight: 4 }} />
+                      <Text className="text-[#607C64] text-[10px] font-bold">Re-Calibrate</Text>
                     </>
                   )}
                 </TouchableOpacity>
               </View>
 
               {/* Greeting Summary */}
-              <Text className="text-emerald-100/90 text-sm leading-relaxed mb-4">
+              <Text className="text-slate-650 text-xs leading-relaxed mb-4">
                 {todayBriefing.summary}
               </Text>
 
-              {/* Health Mission */}
-              <View className="bg-emerald-900/10 border border-emerald-800/30 p-4 rounded-2xl mb-4 flex-row items-center">
-                <Text className="text-xl mr-3">🎯</Text>
-                <View className="flex-1">
-                  <Text className="text-emerald-400 text-[10px] uppercase font-serif font-bold tracking-wider">Today's Health Mission</Text>
-                  <Text className="text-white text-sm font-bold mt-0.5">{todayBriefing.mission}</Text>
+              {/* Recommendations bullets */}
+              <View className="space-y-2">
+                <View className="flex-row items-center mt-1">
+                  <Ionicons name="flame-outline" size={13} color="#C07A65" style={{ marginRight: 8 }} />
+                  <Text className="text-slate-600 text-xs font-sans">Energy is good</Text>
                 </View>
-              </View>
-
-              {/* Risks & Opportunities side-by-side */}
-              <View className="flex-row space-x-3 mb-4">
-                {/* Risks */}
-                <View className="flex-1 bg-red-950/20 border border-red-900/20 p-4 rounded-2xl">
-                  <Text className="text-red-400 text-xs font-serif font-bold flex-row items-center">
-                    <Ionicons name="warning-outline" size={12} style={{ marginRight: 4 }} /> Today's Risks
-                  </Text>
-                  <Text className="text-red-200/70 text-[11px] leading-relaxed mt-1.5">{todayBriefing.risks}</Text>
+                <View className="flex-row items-center mt-1">
+                  <Ionicons name="water-outline" size={13} color="#5C788A" style={{ marginRight: 8 }} />
+                  <Text className="text-slate-600 text-xs font-sans">Drink a little more water</Text>
                 </View>
-                
-                {/* Opportunities */}
-                <View className="flex-1 bg-emerald-950/40 border border-emerald-900/20 p-4 rounded-2xl">
-                  <Text className="text-emerald-400 text-xs font-serif font-bold flex-row items-center">
-                    <Ionicons name="bulb-outline" size={12} style={{ marginRight: 4 }} /> Opportunities
-                  </Text>
-                  <Text className="text-emerald-200/70 text-[11px] leading-relaxed mt-1.5">{todayBriefing.opportunities}</Text>
+                <View className="flex-row items-center mt-1">
+                  <Ionicons name="leaf-outline" size={13} color="#607C64" style={{ marginRight: 8 }} />
+                  <Text className="text-slate-600 text-xs font-sans">Take short breaks at work</Text>
                 </View>
-              </View>
-
-              {/* Forecast Outcome Scores (Dosha, Agni, Ojas) */}
-              <View className="bg-emerald-950/30 border border-emerald-900/20 p-4 rounded-2xl mb-4">
-                <Text className="text-emerald-400 text-xs font-serif font-bold uppercase tracking-wider mb-2.5">Expected Outcomes Tomorrow</Text>
-                <View className="flex-row justify-around items-center pt-1">
-                  <View className="items-center">
-                    <Text className="text-emerald-400/50 text-[9px] uppercase font-bold">Expected Dosha</Text>
-                    <Text className="text-white text-xs font-bold mt-1">
-                      V:{Math.round(todayBriefing.expectedDosha?.vata || 33)}% | P:{Math.round(todayBriefing.expectedDosha?.pitta || 33)}%
-                    </Text>
-                  </View>
-                  <View className="h-6 w-[1px] bg-emerald-800/20" />
-                  <View className="items-center">
-                    <Text className="text-emerald-400/50 text-[9px] uppercase font-bold">Expected Agni</Text>
-                    <Text className="text-white text-xs font-bold mt-1">{todayBriefing.expectedAgni || 75}%</Text>
-                  </View>
-                  <View className="h-6 w-[1px] bg-emerald-800/20" />
-                  <View className="items-center">
-                    <Text className="text-emerald-400/50 text-[9px] uppercase font-bold">Expected Ojas</Text>
-                    <Text className="text-white text-xs font-bold mt-1">{todayBriefing.expectedOjas || 78}%</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Recommendations */}
-              <View className="mb-4">
-                <Text className="text-emerald-300 text-xs font-serif font-bold mb-2">Actions to Take</Text>
-                <View className="space-y-2">
-                  {todayBriefing.recommendations.map((rec, idx) => (
-                    <View key={idx} className="flex-row items-center bg-emerald-950/40 px-3.5 py-3 rounded-xl border border-emerald-900/20 justify-between">
-                      <View className="flex-row items-center flex-1 mr-2">
-                        <Ionicons name="checkbox-outline" size={16} color="#10b981" style={{ marginRight: 8 }} />
-                        <Text className="text-emerald-100/90 text-xs flex-1 leading-relaxed">{rec}</Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => handleOpenExplanation(rec)}
-                        className="bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1.5 rounded-lg active:bg-emerald-500/20"
-                      >
-                        <Text className="text-emerald-400 font-bold text-[8px] uppercase tracking-wider">WHY?</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              </View>
-
-              {/* Expected Recovery */}
-              <View className="bg-emerald-900/10 border border-emerald-800/20 p-3.5 rounded-xl">
-                <Text className="text-emerald-400 text-xs font-serif font-bold">Expected Recovery</Text>
-                <Text className="text-emerald-200/60 text-xs mt-0.5 leading-relaxed">{todayBriefing.expectedRecovery}</Text>
               </View>
             </View>
           ) : (
-            <View className="bg-emerald-950/20 border border-emerald-800/35 p-6 rounded-3xl mb-6 items-center">
-              <Ionicons name="sparkles-outline" size={32} color="#047857" style={{ marginBottom: 12 }} />
-              <Text className="text-white text-sm font-serif font-bold text-center mb-1">Calibration Required</Text>
-              <Text className="text-emerald-400/60 text-xs text-center px-4 mb-4">
+            <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl mb-6 items-center shadow-sm">
+              <Ionicons name="sparkles-outline" size={32} color="#607C64" style={{ marginBottom: 12 }} />
+              <Text className="text-[#2E3A2F] text-sm font-serif font-bold text-center mb-1">Calibration Required</Text>
+              <Text className="text-slate-500 text-xs text-center px-4 mb-4 leading-relaxed">
                 Generate today's morning diagnostic briefing based on your latest steps, heart rates, sleep, and constitution tags.
               </Text>
               
               <TouchableOpacity
                 onPress={compileTodayBriefing}
                 disabled={briefingLoading}
-                className="bg-emerald-500 py-3 px-6 rounded-xl flex-row justify-center items-center active:bg-emerald-600 shadow-md shadow-emerald-500/10"
+                className="bg-[#7D9C83] py-3 px-6 rounded-xl flex-row justify-center items-center active:bg-[#607C64] shadow-md shadow-emerald-500/10"
               >
                 {briefingLoading ? (
                   <>
-                    <ActivityIndicator size="small" color="#022c22" className="mr-2" />
-                    <Text className="text-emerald-950 font-bold text-xs">Analyzing Biometrics...</Text>
+                    <ActivityIndicator size="small" color="#FFFFFF" className="mr-2" />
+                    <Text className="text-white font-bold text-xs">Analyzing Biometrics...</Text>
                   </>
                 ) : (
                   <>
-                    <Ionicons name="sparkles" size={14} color="#022c22" style={{ marginRight: 6 }} />
-                    <Text className="text-emerald-950 font-bold text-xs">Generate Today's Intelligence</Text>
+                    <Ionicons name="sparkles" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+                    <Text className="text-white font-bold text-xs">Generate Today's Intelligence</Text>
                   </>
                 )}
               </TouchableOpacity>
             </View>
           )}
 
-          {/* DYNAMIC SHAT KRIYA KALA PATHOLOGY METER */}
-          <ShatKriyaMeter />
-
-          {/* DYNAMIC PREDICTIVE IMBLANCE WARNING */}
-          <PredictiveWarningCard />
-
-          {/* DYNAMIC PREDICTIVE HEALTH FORECAST */}
-          <PredictiveForecastCard />
-
-          {/* COACH QUICK ACCESS CONSULT TRIGGER */}
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/coach')}
-            activeOpacity={0.85}
-            className="bg-[#051f18]/30 border border-emerald-800/30 p-5 rounded-3xl mb-6 flex-row items-center justify-between active:bg-emerald-900/10"
-          >
-            <View className="flex-1 mr-4">
-              <Text className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-0.5">Need Ayurvedic Corrections?</Text>
-              <Text className="text-white text-base font-extrabold mb-1">Consult AquaGuru AI</Text>
-              <Text className="text-emerald-200/60 text-[10px] leading-relaxed">
-                Get step-by-step corrections, daily tips, and custom tea recipes to clear these predicted element accumulations.
-              </Text>
+          {/* ================= SECTION: HEALTH SCORES ================= */}
+          <View className="flex-row justify-between items-center mb-4 mt-2">
+            <Text className="text-[#2E3A2F] text-xs font-serif font-bold uppercase tracking-widest">Health Scores</Text>
+            
+            {/* Interval switch */}
+            <View className="flex-row bg-[#F2EFE8] p-0.5 rounded-lg border border-[#E4E1D8]">
+              {(['daily', 'weekly', 'monthly'] as const).map((type) => {
+                const isSelected = selectedInterval === type;
+                return (
+                  <TouchableOpacity
+                    key={type}
+                    onPress={() => setSelectedInterval(type)}
+                    className={`px-3 py-1 rounded-md ${isSelected ? 'bg-[#7D9C83]' : ''}`}
+                  >
+                    <Text className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? 'text-white' : 'text-[#607C64]/60'}`}>
+                      {type === 'daily' ? 'Daily' : type === 'weekly' ? 'Weekly' : 'Monthly'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            <Ionicons name="chatbubble-ellipses-outline" size={24} color="#34d399" />
-          </TouchableOpacity>
-
-          {/* ================= SECTION: STORYTELLER ANALYTICS ================= */}
-          <View className="bg-[#051f18]/30 border border-emerald-800/20 p-5 rounded-3xl mb-6">
-            <View className="flex-row justify-between items-center mb-4 border-b border-emerald-950 pb-3">
-              <View className="flex-row items-center">
-                <Ionicons name="journal-outline" size={16} color="#34d399" />
-                <Text className="text-white text-sm font-serif font-black ml-2">Ayurvedic Biometric Story</Text>
-              </View>
-              
-              {/* Weekly/Monthly Story Toggle */}
-              <View className="flex-row bg-[#111d19] p-0.5 rounded-lg border border-[#1f372f]">
-                {(['weekly', 'monthly'] as const).map((type) => {
-                  const isSelected = storyInterval === type;
-                  return (
-                    <TouchableOpacity
-                      key={type}
-                      onPress={() => setStoryInterval(type)}
-                      className={`px-3 py-1 rounded-md ${isSelected ? 'bg-emerald-500' : ''}`}
-                    >
-                      <Text className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? 'text-emerald-955' : 'text-emerald-400/60'}`}>
-                        {type === 'weekly' ? 'Weekly' : 'Monthly'}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {storyInterval === 'weekly' ? (
-              <View className="space-y-4">
-                {/* 7-DAY INTERACTIVE TIMELINE SWIPER */}
-                <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-widest font-mono">Interactive Daily Storyline</Text>
-                
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-1">
-                  {last7DaysData.map((day, idx) => {
-                    const isSelected = selectedTimelineDay === idx;
-                    return (
-                      <TouchableOpacity
-                        key={idx}
-                        onPress={() => setSelectedTimelineDay(idx)}
-                        className={`items-center justify-center w-12 h-12 rounded-full mr-2.5 border ${
-                          isSelected 
-                            ? 'bg-emerald-500 border-emerald-400' 
-                            : 'bg-[#111d19] border-[#1f372f]'
-                        }`}
-                      >
-                        <Text className={`text-[9px] font-black ${isSelected ? 'text-emerald-955' : 'text-emerald-400/50'}`}>
-                          {day.label}
-                        </Text>
-                        <Text className={`text-[8px] font-mono mt-0.5 ${isSelected ? 'text-emerald-950 font-bold' : 'text-slate-400'}`}>
-                          {day.recovery}%
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-
-                {/* Day narrative detail card */}
-                {last7DaysData[selectedTimelineDay] && (
-                  <View className="bg-[#111d19]/45 border border-[#1f372f] p-4.5 rounded-2xl">
-                    <View className="flex-row justify-between items-center mb-2.5">
-                      <Text className="text-white text-xs font-serif font-black">
-                        {last7DaysData[selectedTimelineDay].date} Story
-                      </Text>
-                      <View className="bg-emerald-500/10 border border-emerald-500/35 px-2 py-0.5 rounded-full">
-                        <Text className="text-emerald-400 text-[8px] font-bold uppercase font-mono">
-                          {last7DaysData[selectedTimelineDay].dosha}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Text className="text-slate-200 text-xs leading-relaxed font-sans">
-                      {last7DaysData[selectedTimelineDay].story}
-                    </Text>
-
-                    {/* Vitals snapshot layout */}
-                    <View className="flex-row justify-around mt-4 pt-3 border-t border-[#1f372f]/45">
-                      <View className="items-center">
-                        <Text className="text-emerald-400/50 text-[8px] uppercase font-bold">Pulse Rate</Text>
-                        <Text className="text-white text-xs font-bold font-mono mt-0.5">{last7DaysData[selectedTimelineDay].hr} bpm</Text>
-                      </View>
-                      <View className="items-center">
-                        <Text className="text-emerald-400/50 text-[8px] uppercase font-bold">Sleep Index</Text>
-                        <Text className="text-white text-xs font-bold font-mono mt-0.5">{last7DaysData[selectedTimelineDay].sleep}/100</Text>
-                      </View>
-                      <View className="items-center">
-                        <Text className="text-emerald-400/50 text-[8px] uppercase font-bold">Active Steps</Text>
-                        <Text className="text-white text-xs font-bold font-mono mt-0.5">{last7DaysData[selectedTimelineDay].steps}</Text>
-                      </View>
-                    </View>
-                  </View>
-                )}
-
-                {/* Achievements & Milestones */}
-                <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-widest font-mono mt-2">Health Milestones</Text>
-                
-                <View className="space-y-2">
-                  <View className="bg-[#111d19]/45 border border-[#1f372f] p-3.5 rounded-2xl flex-row items-center">
-                    <Text className="text-xl mr-3">🛡️</Text>
-                    <View className="flex-1">
-                      <Text className="text-white text-xs font-bold">Immune Fortitude Achieved</Text>
-                      <Text className="text-emerald-200/50 text-[9px] mt-0.5 leading-relaxed">
-                        Nourished Ojas immune reserves above 80% on 5 nights due to early sleep habits.
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View className="bg-[#111d19]/45 border border-[#1f372f] p-3.5 rounded-2xl flex-row items-center">
-                    <Text className="text-xl mr-3">🔥</Text>
-                    <View className="flex-1">
-                      <Text className="text-white text-xs font-bold">Metabolic Spark Maintained</Text>
-                      <Text className="text-emerald-200/50 text-[9px] mt-0.5 leading-relaxed">
-                        Stabilized digestive Agni in Sama state for 3 consecutive days with warm water infusions.
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Lifestyle & Recovery trends progress */}
-                <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-widest font-mono mt-2">Circadian Trends</Text>
-                <View className="bg-[#111d19]/45 border border-[#1f372f] p-4.5 rounded-2xl space-y-3">
-                  <View>
-                    <View className="flex-row justify-between mb-0.5">
-                      <Text className="text-slate-350 text-[10px] font-sans">Water compliance</Text>
-                      <Text className="text-white text-[10px] font-mono font-bold">88%</Text>
-                    </View>
-                    <View className="w-full h-1 bg-[#1f372f] rounded-full overflow-hidden">
-                      <View className="h-full bg-emerald-500 rounded-full" style={{ width: '88%' }} />
-                    </View>
-                  </View>
-
-                  <View>
-                    <View className="flex-row justify-between mb-0.5">
-                      <Text className="text-slate-350 text-[10px] font-sans">Active step trends</Text>
-                      <Text className="text-white text-[10px] font-mono font-bold">78%</Text>
-                    </View>
-                    <View className="w-full h-1 bg-[#1f372f] rounded-full overflow-hidden">
-                      <View className="h-full bg-sky-400 rounded-full" style={{ width: '78%' }} />
-                    </View>
-                  </View>
-
-                  <View>
-                    <View className="flex-row justify-between mb-0.5">
-                      <Text className="text-slate-350 text-[10px] font-sans">Sleep rhythm consistency</Text>
-                      <Text className="text-white text-[10px] font-mono font-bold">84%</Text>
-                    </View>
-                    <View className="w-full h-1 bg-[#1f372f] rounded-full overflow-hidden">
-                      <View className="h-full bg-violet-400 rounded-full" style={{ width: '84%' }} />
-                    </View>
-                  </View>
-                </View>
-              </View>
-            ) : (
-              <View className="space-y-4">
-                {/* MONTHLY SEASONAL RITUCHARYA STORY */}
-                <View className="bg-[#111d19]/45 border border-[#1f372f] p-4.5 rounded-2xl">
-                  <View className="flex-row justify-between items-center mb-2.5">
-                    <Text className="text-white text-xs font-serif font-black">Monthly Ritucharya Story</Text>
-                    <View className="bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                      <Text className="text-amber-400 text-[8px] font-bold uppercase font-mono">Adana Kala Season</Text>
-                    </View>
-                  </View>
-
-                  <Text className="text-slate-200 text-xs leading-relaxed font-sans mb-3">
-                    You are navigating the late dry season transition (Adana Kala). Intense solar radiation depletes the body's cooling moisture reserves daily, elevating bodily Vata elements and causing Agni to flicker.
-                  </Text>
-                  
-                  <View className="bg-[#172722]/50 border border-[#1f372f]/50 p-3 rounded-xl">
-                    <Text className="text-emerald-400 text-[9px] font-bold uppercase tracking-widest font-mono mb-1">Seasonal Guidelines</Text>
-                    <Text className="text-slate-300 text-[10px] leading-relaxed">
-                      Drink cooling fluids (coconut water, buttermilk) and consume sweet, juicy summer fruits to preserve cellular vitality and protect your tissue reserves.
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Monthly achievements */}
-                <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-widest font-mono mt-2">Monthly Achievements</Text>
-                <View className="bg-[#111d19]/45 border border-[#1f372f] p-3.5 rounded-2xl flex-row items-center">
-                  <Text className="text-xl mr-3">🧘</Text>
-                  <View className="flex-1">
-                    <Text className="text-white text-xs font-bold">Consistent Prana Flow</Text>
-                    <Text className="text-emerald-200/50 text-[9px] mt-0.5 leading-relaxed">
-                      Completed 18 morning breathing practices, lowering overall heart rate variability stress indexes.
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Monthly Trends */}
-                <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-widest font-mono mt-2">Seasonal Index Averages</Text>
-                <View className="bg-[#111d19]/45 border border-[#1f372f] p-4.5 rounded-2xl space-y-3">
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-slate-300 text-xs font-sans">Average Sleep Score</Text>
-                    <Text className="text-white text-xs font-bold font-mono">81/100</Text>
-                  </View>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-slate-300 text-xs font-sans">Agni Metabolic Balance</Text>
-                    <Text className="text-white text-xs font-bold font-mono">82%</Text>
-                  </View>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-slate-300 text-xs font-sans">Ojas Immune Shield</Text>
-                    <Text className="text-white text-xs font-bold font-mono">84%</Text>
-                  </View>
-                </View>
-              </View>
-            )}
           </View>
 
-          {/* Time Interval Selector for AI diagnostic reports */}
-          <Text className="text-emerald-300/80 text-xs font-bold uppercase tracking-widest mb-3">Historical Reports</Text>
-          <View className="flex-row bg-emerald-905/20 p-1 rounded-xl border border-emerald-850/30 mb-5">
-            {(['daily', 'weekly', 'monthly'] as const).map((interval) => (
-              <TouchableOpacity
-                key={interval}
-                onPress={() => {
-                  setSelectedInterval(interval);
-                  setActiveBarIndex(null);
-                  setErrorMsg('');
-                }}
-                className={`flex-1 py-2 rounded-lg items-center ${
-                  selectedInterval === interval ? 'bg-emerald-500' : 'bg-transparent'
-                }`}
-              >
-                <Text
-                  className={`text-xs font-bold capitalize ${
-                    selectedInterval === interval ? 'text-emerald-950' : 'text-emerald-400/80'
-                  }`}
+          {/* Concentric rings grid */}
+          <View className="flex-row gap-3 mb-3">
+            <ConcentricRing label="Energy" value={todayOjas?.ojas_score || 78} color="#C07A65" icon="flame" subtitle="how active you feel" />
+            <ConcentricRing label="Recovery" value={last7DaysData[6]?.recovery || 83} color="#607C64" icon="shield-checkmark" subtitle="body strength" />
+            <ConcentricRing label="Hydration" value={hydrationPct} color="#5C788A" icon="water" subtitle="water balance" />
+          </View>
+          <View className="flex-row gap-3 mb-6">
+            <ConcentricRing label="Sleep" value={todayBriefing?.expectedOjas || 80} color="#8B5CF6" icon="moon" subtitle="sleep restoration" />
+            <ConcentricRing label="Activity" value={stepsPct} color="#607C64" icon="footsteps" subtitle="body movement" />
+            <ConcentricRing label="Mind" value={69} color="#D97706" icon="happy" subtitle="mental stillness" />
+          </View>
+
+          <VitalTrendsChart data={last7DaysData.map(d => ({ label: d.label, recovery: d.recovery, energy: d.ojas }))} />
+
+          {/* ================= SECTION: BODY BALANCE ================= */}
+          <View className="bg-white border border-[#E4E1D8] p-5 rounded-3xl mb-6 shadow-sm shadow-[#E4E1D8]/20">
+            <View className="flex-row justify-between items-center mb-3">
+              <View>
+                <Text className="text-[#2E3A2F] text-sm font-serif font-black">Body Balance</Text>
+                <Text className="text-slate-450 text-[9px] font-mono">Your natural body type today</Text>
+              </View>
+              <Ionicons name="body-outline" size={16} color="#607C64" />
+            </View>
+
+            <View className="space-y-3.5 mb-4">
+              <View>
+                <View className="flex-row justify-between mb-1.5">
+                  <Text className="text-slate-600 text-xs font-bold">Movement (Vata)</Text>
+                  <Text className="text-[#5C788A] text-xs font-bold font-mono">{currentDosha?.vata || 24}%</Text>
+                </View>
+                <View className="w-full h-2 bg-[#F2EFE8] rounded-full overflow-hidden">
+                  <View style={{ width: `${currentDosha?.vata || 24}%` }} className="h-full bg-[#5C788A] rounded-full" />
+                </View>
+              </View>
+
+              <View>
+                <View className="flex-row justify-between mb-1.5">
+                  <Text className="text-slate-600 text-xs font-bold">Heat (Pitta)</Text>
+                  <Text className="text-[#C07A65] text-xs font-bold font-mono">{currentDosha?.pitta || 49}%</Text>
+                </View>
+                <View className="w-full h-2 bg-[#F2EFE8] rounded-full overflow-hidden">
+                  <View style={{ width: `${currentDosha?.pitta || 49}%` }} className="h-full bg-[#C07A65] rounded-full" />
+                </View>
+              </View>
+
+              <View>
+                <View className="flex-row justify-between mb-1.5">
+                  <Text className="text-slate-600 text-xs font-bold">Stability (Kapha)</Text>
+                  <Text className="text-[#607C64] text-xs font-bold font-mono">{currentDosha?.kapha || 27}%</Text>
+                </View>
+                <View className="w-full h-2 bg-[#F2EFE8] rounded-full overflow-hidden">
+                  <View style={{ width: `${currentDosha?.kapha || 27}%` }} className="h-full bg-[#607C64] rounded-full" />
+                </View>
+              </View>
+            </View>
+
+            <View className="bg-red-50 border border-red-100 p-4.5 rounded-2xl flex-row items-center mt-2">
+              <Text className="text-lg mr-2.5">🔥</Text>
+              <Text className="text-red-800 text-[11px] leading-relaxed flex-1 font-medium">
+                Your body runs a little warm today. Choose cooling foods and calmer activities.
+              </Text>
+            </View>
+          </View>
+
+          {/* ================= SECTION: TODAY'S RECOMMENDATIONS ================= */}
+          <View className="bg-white border border-[#E4E1D8] p-5 rounded-3xl mb-6 shadow-sm shadow-[#E4E1D8]/20">
+            <View className="flex-row justify-between items-center mb-3">
+              <View>
+                <Text className="text-[#2E3A2F] text-sm font-serif font-black">Today's Recommendations</Text>
+                <Text className="text-slate-450 text-[9px] font-mono">Small habits, big shift</Text>
+              </View>
+              <Ionicons name="checkmark-circle-outline" size={16} color="#607C64" />
+            </View>
+
+            <View className="flex-row flex-wrap gap-2 mt-2">
+              {[
+                { title: 'Drink Water', icon: 'water-outline' },
+                { title: 'Eat Fresh Food', icon: 'leaf-outline' },
+                { title: 'Walk 20 min', icon: 'walk-outline' },
+                { title: 'Sleep Earlier', icon: 'moon-outline' },
+                { title: 'Deep Breathing', icon: 'body-outline' },
+                { title: 'Morning Sun', icon: 'sunny-outline' }
+              ].map((rec) => (
+                <TouchableOpacity
+                  key={rec.title}
+                  onPress={() => handleOpenExplanation(rec.title)}
+                  className="flex-row items-center bg-[#F2EFE8] border border-[#E4E1D8] px-3.5 py-2.5 rounded-2xl active:bg-[#E4E1D8]/50"
                 >
-                  {interval}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Ionicons name={rec.icon as any} size={12} color="#607C64" style={{ marginRight: 6 }} />
+                  <Text className="text-[#2E3A2F] text-[11px] font-bold">{rec.title}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
-          {/* DIAGONOSTICS REPORT DETAILS */}
-          {!normalizedReport ? (
-            <View className="bg-[#051f18]/20 border border-dashed border-emerald-850/30 p-8 rounded-2xl items-center py-10 mb-6">
-              <View className="w-12 h-12 rounded-full bg-emerald-900/20 items-center justify-center mb-3">
-                <Ionicons name="sparkles" size={24} color="#10b981" />
+          {/* ================= SECTION: HEALTH FORECAST ================= */}
+          <View className="bg-white border border-[#E4E1D8] p-5 rounded-3xl mb-6 shadow-sm shadow-[#E4E1D8]/20">
+            <View className="flex-row justify-between items-center mb-3">
+              <View>
+                <Text className="text-[#2E3A2F] text-sm font-serif font-black">Health Forecast</Text>
+                <Text className="text-slate-450 text-[9px] font-mono">What tomorrow looks like</Text>
               </View>
-              <Text className="text-emerald-400 text-sm font-semibold mb-1">No Report Available</Text>
-              <Text className="text-emerald-500/60 text-xs text-center px-4 mb-4">
-                Compile a dynamic health analysis log for the selected interval.
-              </Text>
-              <TouchableOpacity
-                onPress={compileNewReport}
-                disabled={compiling}
-                className="bg-emerald-500/10 border border-emerald-500/30 px-5 py-2.5 rounded-xl"
-              >
-                <Text className="text-emerald-400 font-bold text-xs">Run Diagnostic Analysis</Text>
-              </TouchableOpacity>
+              <Ionicons name="sparkles-outline" size={16} color="#607C64" />
             </View>
-          ) : (
-            <View className="mb-6">
-              <View className="bg-emerald-900/20 border border-emerald-850/20 p-4 rounded-xl mb-4 flex-row justify-between items-center">
-                <View>
-                  <Text className="text-emerald-400/50 text-[9px] font-bold uppercase tracking-wider">Report Window</Text>
-                  <Text className="text-white text-xs font-semibold mt-0.5">
-                    {normalizedReport.start_date} to {normalizedReport.end_date}
-                  </Text>
-                </View>
-                <View className="bg-emerald-500/20 border border-emerald-500/30 px-3 py-1 rounded-full">
-                  <Text className="text-emerald-400 text-[10px] font-bold uppercase">
-                    {selectedInterval}
-                  </Text>
-                </View>
-              </View>
 
-              <View className="flex-row gap-4 mb-4">
-                <View className="flex-1 bg-[#051f18]/30 border border-emerald-800/20 p-4 rounded-2xl items-center relative overflow-hidden">
-                  <Text className="text-emerald-300/80 text-[11px] font-bold uppercase mb-3">Health Index</Text>
-                  <View className={`w-18 h-18 rounded-full border-4 ${getScoreColor(normalizedReport.health_score!).border} items-center justify-center bg-emerald-950/70 mb-2 relative`}>
-                    <Text className={`text-xl font-bold font-mono ${getScoreColor(normalizedReport.health_score!).text}`}>
-                      {normalizedReport.health_score}
-                    </Text>
-                  </View>
-                </View>
-
-                <View className="flex-1 bg-[#051f18]/30 border border-emerald-800/20 p-4 rounded-2xl items-center relative overflow-hidden">
-                  <Text className="text-emerald-300/80 text-[11px] font-bold uppercase mb-3">Goal Compliance</Text>
-                  <View className={`w-18 h-18 rounded-full border-4 ${getScoreColor(normalizedReport.wellness_score!).border} items-center justify-center bg-emerald-950/70 mb-2 relative`}>
-                    <Text className={`text-xl font-bold font-mono ${getScoreColor(normalizedReport.wellness_score!).text}`}>
-                      {normalizedReport.wellness_score}
-                    </Text>
-                  </View>
-                </View>
+            {/* Direction indicators */}
+            <View className="flex-row gap-2 mb-4 mt-2">
+              <View className="flex-1 bg-[#FDF4F2] border border-[#FBE3DC] p-3 rounded-2xl items-center">
+                <Ionicons name="arrow-up" size={14} color="#C07A65" />
+                <Text className="text-[#C07A65] text-[10px] font-bold mt-1">Energy</Text>
               </View>
-
-              <View className="bg-[#051f18]/35 border border-emerald-800/25 p-5 rounded-2xl shadow-lg">
-                <View className="flex-row items-center mb-3">
-                  <Ionicons name="sparkles" size={15} color="#34d399" className="mr-2" />
-                  <Text className="text-white text-sm font-bold">Ayurvedic Insight Summary</Text>
-                </View>
-                <View className="border-t border-emerald-900/30 pt-3">
-                  {renderMarkdown(normalizedReport.summary_markdown)}
-                </View>
+              <View className="flex-1 bg-[#F3F6F4] border border-[#E5ECE7] p-3 rounded-2xl items-center">
+                <Ionicons name="trending-up" size={14} color="#607C64" />
+                <Text className="text-[#607C64] text-[10px] font-bold mt-1">Recovery</Text>
               </View>
+              <View className="flex-1 bg-[#F4F7F9] border border-[#E6EEF2] p-3 rounded-2xl items-center">
+                <Ionicons name="arrow-down" size={14} color="#5C788A" />
+                <Text className="text-[#5C788A] text-[10px] font-bold mt-1">Hydration</Text>
+              </View>
+              <View className="flex-1 bg-[#F6F4FB] border border-[#EBE6F6] p-3 rounded-2xl items-center">
+                <Ionicons name="arrow-up" size={14} color="#8B5CF6" />
+                <Text className="text-[#8B5CF6] text-[10px] font-bold mt-1">Sleep</Text>
+              </View>
+            </View>
+
+            <ForecastLineChart />
+          </View>
+
+          {/* ================= SECTION: ACCORDION EXPANDABLE PANELS ================= */}
+          
+          {/* Today vs This Week Accordion */}
+          <TouchableOpacity
+            onPress={() => setExpandedPanel(expandedPanel === 'comparison' ? null : 'comparison')}
+            className="bg-white border border-[#E4E1D8] p-4.5 rounded-2xl mb-3 flex-row justify-between items-center active:bg-[#F2EFE8]/40 shadow-sm"
+          >
+            <Text className="text-[#2E3A2F] text-xs font-bold font-serif">Today vs This Week</Text>
+            <Ionicons name={expandedPanel === 'comparison' ? 'chevron-up' : 'chevron-down'} size={14} color="#607C64" />
+          </TouchableOpacity>
+          {expandedPanel === 'comparison' && (
+            <View className="bg-white border border-[#E4E1D8] p-5 rounded-2xl mb-3 -mt-1 shadow-sm">
+              <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono mb-2">Metrics comparison</Text>
+              <Text className="text-slate-600 text-xs leading-relaxed">
+                Your recovery today ({last7DaysData[6]?.recovery || 83}%) is 4% higher than your weekly average. Digestive fire (Agni) peaks are holding stable.
+              </Text>
             </View>
           )}
 
-          {/* HISTORICAL ARCHIVE LIST */}
-          <View className="mt-2">
-            <Text className="text-white text-sm font-bold mb-3 flex-row items-center">
-              <Ionicons name="time-outline" size={16} color="#34d399" className="mr-1" /> Archived Forecasts
-            </Text>
+          {/* Wellness History (Archived logs) */}
+          <TouchableOpacity
+            onPress={() => setExpandedPanel(expandedPanel === 'history' ? null : 'history')}
+            className="bg-white border border-[#E4E1D8] p-4.5 rounded-2xl mb-3 flex-row justify-between items-center active:bg-[#F2EFE8]/40 shadow-sm"
+          >
+            <Text className="text-[#2E3A2F] text-xs font-bold font-serif">Wellness History</Text>
+            <Ionicons name={expandedPanel === 'history' ? 'chevron-up' : 'chevron-down'} size={14} color="#607C64" />
+          </TouchableOpacity>
+          {expandedPanel === 'history' && (
+            <View className="bg-white border border-[#E4E1D8] p-5 rounded-2xl mb-3 -mt-1 shadow-sm">
+              <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono mb-3">Your last 5 diagnostic reports</Text>
+              {reports.slice(0, 5).map((rep) => {
+                const normRep = normalizeReport(rep);
+                return (
+                  <TouchableOpacity
+                    key={rep.id}
+                    onPress={() => setSelectedReportForModal(normRep)}
+                    className="border-b border-[#E4E1D8]/45 py-3 flex-row justify-between items-center active:bg-emerald-955/5"
+                  >
+                    <View className="flex-1 mr-2">
+                      <Text className="text-slate-500 text-[10px] font-mono">{rep.start_date}</Text>
+                      <Text className="text-[#2E3A2F] text-xs font-bold mt-0.5" numberOfLines={1}>{rep.summary_markdown}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={12} color="#607C64" />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
 
-            {historyReports.length === 0 ? (
-              <View className="bg-emerald-900/5 border border-dashed border-emerald-900/15 p-6 rounded-xl justify-center items-center">
-                <Text className="text-emerald-500/50 text-[11px] font-medium">No previous archived logs.</Text>
-              </View>
+          {/* Habit Progress */}
+          <TouchableOpacity
+            onPress={() => setExpandedPanel(expandedPanel === 'habits' ? null : 'habits')}
+            className="bg-white border border-[#E4E1D8] p-4.5 rounded-2xl mb-6 flex-row justify-between items-center active:bg-[#F2EFE8]/40 shadow-sm"
+          >
+            <Text className="text-[#2E3A2F] text-xs font-bold font-serif">Habit Progress</Text>
+            <Ionicons name={expandedPanel === 'habits' ? 'chevron-up' : 'chevron-down'} size={14} color="#607C64" />
+          </TouchableOpacity>
+          {expandedPanel === 'habits' && (
+            <View className="bg-white border border-[#E4E1D8] p-5 rounded-2xl mb-6 -mt-4 shadow-sm">
+              <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono mb-2">This week at a glance</Text>
+              <Text className="text-slate-600 text-xs leading-relaxed">
+                Hydration: 6/7 days logged successfully. Breathwork: 5/7 days completed. Sleep lock reached 4 nights.
+              </Text>
+            </View>
+          )}
+
+          {/* View Full Diagnostic Report CTA */}
+          <TouchableOpacity
+            onPress={handleShareWeeklyPdf}
+            disabled={pdfLoading}
+            className="bg-[#607C64] py-4 rounded-2xl flex-row justify-center items-center active:bg-[#7D9C83] shadow shadow-[#607C64]/20 mb-6"
+          >
+            {pdfLoading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" className="mr-2" />
             ) : (
-              <View className="space-y-2.5">
-                {historyReports.map((rep) => {
-                  const normRep = normalizeReport(rep);
-                  return (
-                    <TouchableOpacity
-                      key={rep.id}
-                      onPress={() => setSelectedReportForModal(normRep)}
-                      className="bg-[#051f18]/25 border border-emerald-900/20 p-3.5 rounded-xl flex-row justify-between items-center active:bg-emerald-900/10 mb-2"
-                    >
-                      <View className="flex-1 mr-3">
-                        <Text className="text-emerald-400/50 text-[10px] font-mono">
-                          {rep.start_date} to {rep.end_date}
-                        </Text>
-                        <Text className="text-emerald-100/70 text-xs truncate mt-0.5" numberOfLines={1}>
-                          {rep.summary_markdown}
-                        </Text>
-                      </View>
-                      <View className="flex-row items-center gap-2">
-                        <Ionicons name="chevron-forward" size={14} color="#34d399" />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <Ionicons name="document-text-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
             )}
-          </View>
+            <Text className="text-white font-black text-xs uppercase tracking-wider">
+              {pdfLoading ? 'Compiling PDF...' : 'View Full Diagnostic Report'}
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
 
         {/* MODAL DRAWER FOR ARCHIVED REPORTS */}
@@ -1014,44 +810,44 @@ export default function InsightsScreen() {
             animationType="slide"
             onRequestClose={() => setSelectedReportForModal(null)}
           >
-            <SafeAreaView style={{ flex: 1, backgroundColor: '#020b08' }}>
-              <View className="px-6 py-4 flex-row items-center justify-between border-b border-emerald-900/40">
+            <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F6F0' }}>
+              <View className="px-6 py-4 flex-row items-center justify-between border-b border-[#E4E1D8]">
                 <View>
-                  <Text className="text-white text-base font-bold">Archived Log Details</Text>
-                  <Text className="text-emerald-400/50 text-[10px] capitalize font-mono">
+                  <Text className="text-[#2E3A2F] text-base font-bold">Archived Log Details</Text>
+                  <Text className="text-[#607C64] text-[10px] capitalize font-mono">
                     {selectedReportForModal.report_type} Diagnostic Log
                   </Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => setSelectedReportForModal(null)}
-                  className="p-1.5 rounded-lg bg-emerald-900/35 border border-emerald-800/30"
+                  className="p-1.5 rounded-full bg-[#F2EFE8] border border-[#E4E1D8]"
                 >
-                  <Ionicons name="close" size={20} color="#34d399" />
+                  <Ionicons name="close" size={20} color="#607C64" />
                 </TouchableOpacity>
               </View>
 
               <ScrollView className="px-6 py-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
-                <View className="bg-emerald-900/20 border border-emerald-850/20 p-4 rounded-xl mb-4 flex-row justify-between items-center">
+                <View className="bg-[#F5F2EA] border border-[#E4E1D8] p-4 rounded-xl mb-4 flex-row justify-between items-center">
                   <View>
-                    <Text className="text-emerald-400/50 text-[9px] font-bold uppercase tracking-wider">Report Window</Text>
-                    <Text className="text-white text-xs font-semibold mt-0.5">
+                    <Text className="text-[#607C64] text-[9px] font-bold uppercase tracking-wider font-mono">Report Window</Text>
+                    <Text className="text-[#2E3A2F] text-xs font-semibold mt-0.5">
                       {selectedReportForModal.start_date} to {selectedReportForModal.end_date}
                     </Text>
                   </View>
-                  <View className="bg-emerald-500/20 border border-emerald-500/30 px-3 py-1 rounded-full">
-                    <Text className="text-emerald-400 text-[10px] font-bold uppercase">
+                  <View className="bg-white border border-[#E4E1D8] px-3 py-1 rounded-full">
+                    <Text className="text-[#607C64] text-[10px] font-bold uppercase font-mono">
                       {selectedReportForModal.report_type}
                     </Text>
                   </View>
                 </View>
 
-                <View className="bg-[#051f18]/30 border border-emerald-800/20 p-5 rounded-2xl">
+                <View className="bg-white border border-[#E4E1D8] p-5 rounded-2xl shadow-sm">
                   <View className="flex-row items-center mb-3">
-                    <Ionicons name="sparkles" size={15} color="#34d399" className="mr-2" />
-                    <Text className="text-white text-sm font-bold">Ayurvedic Interpretation</Text>
+                    <Ionicons name="sparkles" size={15} color="#607C64" className="mr-2" />
+                    <Text className="text-[#2E3A2F] text-sm font-bold">Ayurvedic Interpretation</Text>
                   </View>
-                  <View className="border-t border-emerald-900/30 pt-3">
-                    {renderMarkdown(selectedReportForModal.summary_markdown)}
+                  <View className="border-t border-[#E4E1D8]/60 pt-3">
+                    <Text className="text-slate-600 text-xs leading-relaxed">{selectedReportForModal.summary_markdown}</Text>
                   </View>
                 </View>
 
@@ -1059,14 +855,14 @@ export default function InsightsScreen() {
                   <TouchableOpacity
                     onPress={handleShareWeeklyPdf}
                     disabled={pdfLoading}
-                    className="mt-5 bg-emerald-500 py-3.5 rounded-2xl flex-row justify-center items-center active:bg-emerald-600 shadow-md shadow-emerald-500/20"
+                    className="mt-5 bg-[#7D9C83] py-3.5 rounded-2xl flex-row justify-center items-center active:bg-[#607C64] shadow-sm"
                   >
                     {pdfLoading ? (
-                      <ActivityIndicator size="small" color="#022c22" className="mr-2" />
+                      <ActivityIndicator size="small" color="#FFFFFF" className="mr-2" />
                     ) : (
-                      <Ionicons name="document-text" size={16} color="#022c22" style={{ marginRight: 6 }} />
+                      <Ionicons name="document-text" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
                     )}
-                    <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">
+                    <Text className="text-white font-black text-xs uppercase tracking-wider">
                       {pdfLoading ? 'Generating PDF...' : 'Share PDF Report'}
                     </Text>
                   </TouchableOpacity>
@@ -1078,11 +874,11 @@ export default function InsightsScreen() {
 
         {/* COMPILING SHIELD OVERLAY */}
         {compiling && (
-          <View className="absolute inset-0 bg-[#020b08]/90 items-center justify-center z-50 px-8">
-            <View className="bg-[#051f18]/40 border border-emerald-800/40 p-8 rounded-3xl items-center max-w-sm shadow-2xl relative overflow-hidden">
-              <ActivityIndicator size="large" color="#34d399" className="mb-4" />
-              <Text className="text-white text-base font-bold text-center mb-2">Querying the Oracle...</Text>
-              <Text className="text-emerald-200/80 text-[11px] text-center leading-relaxed">
+          <View className="absolute inset-0 bg-[#F8F6F0]/95 items-center justify-center z-50 px-8">
+            <View className="bg-white border border-[#E4E1D8] p-8 rounded-3xl items-center max-w-sm shadow-xl relative overflow-hidden">
+              <ActivityIndicator size="large" color="#607C64" className="mb-4" />
+              <Text className="text-[#2E3A2F] text-base font-bold text-center mb-2 font-serif">Querying the Oracle...</Text>
+              <Text className="text-slate-500 text-[11px] text-center leading-relaxed">
                 Analyzing dynamic element trends, mapping imbalances to Shat Kriya Kala stages, and compiling long-term preventative health suggestions using Groq AI...
               </Text>
             </View>
@@ -1102,6 +898,306 @@ export default function InsightsScreen() {
 // Isolated sub-components for Oracle Screen
 // ==========================================
 
+const ConcentricRing = React.memo(function ConcentricRing({
+  label,
+  value,
+  color,
+  icon,
+  subtitle
+}: {
+  label: string;
+  value: number;
+  color: string;
+  icon: string;
+  subtitle: string;
+}) {
+  const radius = 22;
+  const strokeWidth = 3.5;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (value / 100) * circumference;
+
+  return (
+    <View className="bg-white border border-[#E4E1D8] p-4 rounded-2xl items-center flex-1 shadow-sm relative overflow-hidden">
+      <View className="w-12 h-12 justify-center items-center mb-1 relative">
+        <Svg width={52} height={52} viewBox="0 0 52 52">
+          {/* Background track circle */}
+          <Circle
+            cx={26}
+            cy={26}
+            r={radius}
+            stroke="#F2EFE8"
+            strokeWidth={strokeWidth}
+            fill="transparent"
+          />
+          {/* Progress circle */}
+          <Circle
+            cx={26}
+            cy={26}
+            r={radius}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="transparent"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            transform="rotate(-90 26 26)"
+          />
+        </Svg>
+        {/* Inner Text or Icon */}
+        <View className="absolute inset-0 justify-center items-center">
+          <Ionicons name={icon as any} size={14} color={color} />
+        </View>
+      </View>
+      <Text className="text-[#2E3A2F] text-sm font-bold font-mono">{value}%</Text>
+      <Text className="text-[#2E3A2F] text-[10px] font-bold mt-0.5">{label}</Text>
+      <Text className="text-slate-405 text-[7px] font-mono mt-0.5">{subtitle}</Text>
+    </View>
+  );
+});
+
+const VitalTrendsChart = React.memo(function VitalTrendsChart({
+  data
+}: {
+  data: Array<{ label: string; recovery: number; energy: number }>
+}) {
+  const { width: screenWidth } = Dimensions.get('window');
+  const width = screenWidth - 72; // chart margin adjusted
+  const height = 120;
+  const paddingLeft = 30;
+  const paddingRight = 10;
+  const paddingTop = 15;
+  const paddingBottom = 20;
+
+  const chartW = width - paddingLeft - paddingRight;
+  const chartH = height - paddingTop - paddingBottom;
+
+  // Helper to calculate SVG points
+  const getPointsStr = (key: 'recovery' | 'energy') => {
+    return data.map((d, idx) => {
+      const x = paddingLeft + (idx * chartW) / (data.length - 1);
+      const val = d[key];
+      const y = height - paddingBottom - (val / 100) * chartH;
+      return { x, y };
+    });
+  };
+
+  const recoveryPoints = getPointsStr('recovery');
+  const energyPoints = getPointsStr('energy');
+
+  const makePath = (points: Array<{ x: number; y: number }>) => {
+    return points.map((p, idx) => (idx === 0 ? 'M' : 'L') + ` ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  };
+
+  const makeAreaPath = (points: Array<{ x: number; y: number }>) => {
+    if (points.length === 0) return '';
+    const path = makePath(points);
+    const startX = points[0].x.toFixed(1);
+    const endX = points[points.length - 1].x.toFixed(1);
+    const bottomY = (height - paddingBottom).toFixed(1);
+    return `${path} L ${endX} ${bottomY} L ${startX} ${bottomY} Z`;
+  };
+
+  return (
+    <View className="bg-white border border-[#E4E1D8] p-5 rounded-3xl mb-6 shadow-sm shadow-[#E4E1D8]/20">
+      <View className="flex-row justify-between items-center mb-3">
+        <View>
+          <Text className="text-[#2E3A2F] text-sm font-serif font-black">Vital Trends</Text>
+          <Text className="text-slate-400 text-[9px] font-mono">7-day recovery & energy history</Text>
+        </View>
+        <Ionicons name="stats-chart-outline" size={16} color="#607C64" />
+      </View>
+
+      <View className="my-2" style={{ width, height }}>
+        <Svg width={width} height={height}>
+          <Defs>
+            <SvgGradient id="gradRec" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0%" stopColor="#607C64" stopOpacity="0.25" />
+              <Stop offset="100%" stopColor="#607C64" stopOpacity="0" />
+            </SvgGradient>
+            <SvgGradient id="gradEn" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0%" stopColor="#C07A65" stopOpacity="0.2" />
+              <Stop offset="100%" stopColor="#C07A65" stopOpacity="0" />
+            </SvgGradient>
+          </Defs>
+
+          {/* Dotted Grid lines */}
+          {[25, 50, 75, 100].map((level) => {
+            const y = height - paddingBottom - (level / 100) * chartH;
+            return (
+              <SvgLine
+                key={level}
+                x1={paddingLeft}
+                y1={y}
+                x2={width - paddingRight}
+                y2={y}
+                stroke="#E4E1D8"
+                strokeWidth="0.8"
+                strokeDasharray="4 4"
+              />
+            );
+          })}
+
+          {/* Areas */}
+          <Path d={makeAreaPath(recoveryPoints)} fill="url(#gradRec)" />
+          <Path d={makeAreaPath(energyPoints)} fill="url(#gradEn)" />
+
+          {/* Lines */}
+          <Path d={makePath(recoveryPoints)} fill="none" stroke="#607C64" strokeWidth="2" />
+          <Path d={makePath(energyPoints)} fill="none" stroke="#C07A65" strokeWidth="1.8" />
+
+          {/* Y Axis Labels */}
+          {[0, 25, 50, 75, 100].map((val) => {
+            const y = height - paddingBottom - (val / 100) * chartH;
+            return (
+              <SvgLine
+                key={val}
+                x1={paddingLeft - 4}
+                y1={y}
+                x2={paddingLeft}
+                y2={y}
+                stroke="#2E3A2F"
+                strokeWidth="1"
+              />
+            );
+          })}
+
+          {/* X Labels */}
+          {data.map((d, idx) => {
+            const x = paddingLeft + (idx * chartW) / (data.length - 1);
+            return (
+              <SvgLine
+                key={idx}
+                x1={x}
+                y1={height - paddingBottom}
+                x2={x}
+                y2={height - paddingBottom + 4}
+                stroke="#2E3A2F"
+                strokeWidth="1"
+              />
+            );
+          })}
+        </Svg>
+
+        {/* Label text overlays */}
+        <View className="absolute left-0 right-0 bottom-0 flex-row justify-between pl-[30px]" style={{ width }}>
+          {data.map((d, idx) => (
+            <Text key={idx} className="text-slate-400 text-[8px] font-mono text-center font-bold" style={{ width: chartW / 6 }}>
+              {d.label}
+            </Text>
+          ))}
+        </View>
+        <View className="absolute left-0 top-0 bottom-[20px] justify-between items-end pr-1.5" style={{ width: 30 }}>
+          <Text className="text-slate-400 text-[8px] font-mono font-bold">100</Text>
+          <Text className="text-slate-400 text-[8px] font-mono font-bold">75</Text>
+          <Text className="text-slate-400 text-[8px] font-mono font-bold">50</Text>
+          <Text className="text-slate-400 text-[8px] font-mono font-bold">25</Text>
+          <Text className="text-slate-400 text-[8px] font-mono font-bold">0</Text>
+        </View>
+      </View>
+
+      {/* Legend */}
+      <View className="flex-row justify-center items-center gap-4 mt-3 pt-2 border-t border-[#E4E1D8]/30">
+        <View className="flex-row items-center">
+          <View className="w-2 h-2 rounded-full bg-[#607C64] mr-1.5" />
+          <Text className="text-[#2E3A2F] text-[9px] font-bold">Recovery</Text>
+        </View>
+        <View className="flex-row items-center">
+          <View className="w-2 h-2 rounded-full bg-[#C07A65] mr-1.5" />
+          <Text className="text-[#2E3A2F] text-[9px] font-bold">Energy</Text>
+        </View>
+      </View>
+    </View>
+  );
+});
+
+const ForecastLineChart = React.memo(function ForecastLineChart() {
+  const { width: screenWidth } = Dimensions.get('window');
+  const width = screenWidth - 72;
+  const height = 90;
+  const paddingLeft = 20;
+  const paddingRight = 10;
+  const paddingTop = 10;
+  const paddingBottom = 18;
+
+  const chartW = width - paddingLeft - paddingRight;
+  const chartH = height - paddingTop - paddingBottom;
+
+  // Static predicted recovery curve indices
+  const data = [
+    { label: 'Today', val: 74 },
+    { label: 'Tue', val: 76 },
+    { label: 'Wed', val: 73 },
+    { label: 'Thu', val: 78 },
+    { label: 'Fri', val: 80 },
+    { label: 'Sat', val: 79 },
+    { label: 'Sun', val: 82 }
+  ];
+
+  const points = data.map((d, idx) => {
+    const x = paddingLeft + (idx * chartW) / (data.length - 1);
+    const y = height - paddingBottom - ((d.val - 50) / 40) * chartH; // mapped 50-90 range
+    return { x, y, label: d.label, val: d.val };
+  });
+
+  const pathD = points.map((p, idx) => (idx === 0 ? 'M' : 'L') + ` ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
+  return (
+    <View className="my-2 relative" style={{ width, height }}>
+      <Svg width={width} height={height}>
+        {/* Horizontal Grid lines */}
+        {[60, 70, 80, 90].map((level) => {
+          const y = height - paddingBottom - ((level - 50) / 40) * chartH;
+          return (
+            <SvgLine
+              key={level}
+              x1={paddingLeft}
+              y1={y}
+              x2={width - paddingRight}
+              y2={y}
+              stroke="#E4E1D8"
+              strokeWidth="0.8"
+              strokeDasharray="4 4"
+            />
+          );
+        })}
+
+        {/* Dotted indicator line */}
+        <Path d={pathD} fill="none" stroke="#607C64" strokeWidth="1.5" />
+
+        {/* Node Points circles */}
+        {points.map((p, idx) => (
+          <Circle
+            key={idx}
+            cx={p.x}
+            cy={p.y}
+            r={3}
+            fill="#607C64"
+            stroke="#FFFFFF"
+            strokeWidth="1.5"
+          />
+        ))}
+      </Svg>
+
+      {/* Labels below */}
+      <View className="absolute left-0 right-0 bottom-0 flex-row justify-between pl-[20px]" style={{ width }}>
+        {data.map((d, idx) => (
+          <Text key={idx} className="text-slate-400 text-[8px] font-mono text-center font-bold" style={{ width: chartW / 6 }}>
+            {d.label}
+          </Text>
+        ))}
+      </View>
+      
+      {/* Y labels */}
+      <View className="absolute left-0 top-0 bottom-[18px] justify-between items-end pr-1.5" style={{ width: 20 }}>
+        <Text className="text-slate-400 text-[7px] font-mono font-bold">90</Text>
+        <Text className="text-slate-400 text-[7px] font-mono font-bold">78</Text>
+        <Text className="text-slate-400 text-[7px] font-mono font-bold">66</Text>
+        <Text className="text-slate-400 text-[7px] font-mono font-bold">54</Text>
+      </View>
+    </View>
+  );
+});
+
 const ShatKriyaMeter = React.memo(function ShatKriyaMeter() {
   const { vata, pitta, kapha, agni, ojas } = useDigitalTwinStore();
 
@@ -1117,52 +1213,52 @@ const ShatKriyaMeter = React.memo(function ShatKriyaMeter() {
     if (imbalanceIndex < 35) {
       return {
         name: 'Sanchaya (Accumulation)',
-        color: 'text-amber-400',
+        color: 'text-amber-600',
         desc: 'Elements are slightly accumulating in their primary locations. Easy to pacify with standard circadian habits.'
       };
     }
     if (imbalanceIndex < 65) {
       return {
         name: 'Prakopa (Aggravation)',
-        color: 'text-orange-400',
+        color: 'text-orange-600',
         desc: 'Elements are aggravated and overflow. Requires immediate dietary corrections and warm teas.'
       };
     }
     return {
       name: 'Prasara (Spread)',
-      color: 'text-rose-500',
+      color: 'text-red-500',
       desc: 'Imbalance has spread, affecting secondary channels. Focus on pranayama, total rest, and cooling or warming herbs immediately.'
     };
   }, [imbalanceIndex]);
 
   return (
-    <View className="bg-[#051f18]/30 border border-emerald-800/30 p-6 rounded-3xl mb-6 relative overflow-hidden">
+    <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl mb-6 relative overflow-hidden shadow-sm">
       <View className="flex-row justify-between items-center mb-4">
         <View className="flex-row items-center">
-          <Ionicons name="eye-outline" size={18} color="#10b981" />
-          <Text className="text-white font-bold text-sm ml-2">Shat Kriya Kala (Pathology Stage)</Text>
+          <Ionicons name="eye-outline" size={18} color="#607C64" />
+          <Text className="text-[#2E3A2F] font-bold text-sm ml-2">Shat Kriya Kala (Pathology Stage)</Text>
         </View>
-        <Text className="text-emerald-400/50 text-[10px] font-mono">Imbalance Forecast</Text>
+        <Text className="text-[#607C64]/70 text-[10px] font-mono">Imbalance Forecast</Text>
       </View>
 
       <View className="items-center justify-center my-2 relative">
-        <View className="w-full h-4 bg-emerald-950/70 rounded-full overflow-hidden border border-emerald-900/30 relative">
+        <View className="w-full h-4 bg-[#F2EFE8] rounded-full overflow-hidden border border-[#E4E1D8] relative">
           <View style={{ width: `${imbalanceIndex}%` }} className="h-full bg-amber-400 rounded-full" />
-          <View className="absolute left-[35%] top-0 bottom-0 w-[1px] bg-emerald-900/40" />
-          <View className="absolute left-[65%] top-0 bottom-0 w-[1px] bg-emerald-900/40" />
+          <View className="absolute left-[35%] top-0 bottom-0 w-[1px] bg-[#E4E1D8]" />
+          <View className="absolute left-[65%] top-0 bottom-0 w-[1px] bg-[#E4E1D8]" />
         </View>
         <View className="flex-row justify-between w-full mt-2 px-1">
-          <Text className="text-[8px] text-amber-400 font-bold uppercase">Sanchaya</Text>
-          <Text className="text-[8px] text-orange-400 font-bold uppercase">Prakopa</Text>
-          <Text className="text-[8px] text-rose-500 font-bold uppercase">Prasara</Text>
+          <Text className="text-[8px] text-amber-600 font-bold uppercase">Sanchaya</Text>
+          <Text className="text-[8px] text-orange-600 font-bold uppercase">Prakopa</Text>
+          <Text className="text-[8px] text-red-500 font-bold uppercase">Prasara</Text>
         </View>
       </View>
 
-      <View className="mt-4 p-4 bg-emerald-950/45 rounded-2xl border border-emerald-900/20">
-        <Text className="text-white text-xs font-bold">
+      <View className="mt-4 p-4 bg-[#F5F2EA] rounded-2xl border border-[#E4E1D8]">
+        <Text className="text-[#2E3A2F] text-xs font-bold">
           Current Stage: <Text className={stageName.color}>{stageName.name}</Text>
         </Text>
-        <Text className="text-emerald-200/60 text-[10px] mt-1.5 leading-relaxed">
+        <Text className="text-slate-600 text-[10px] mt-1.5 leading-relaxed">
           {stageName.desc}
         </Text>
       </View>
@@ -1180,8 +1276,8 @@ const PredictiveWarningCard = React.memo(function PredictiveWarningCard() {
         title: "Homeostatic Equilibrium",
         warning: "No active element accumulations are predicted. Your circadian habits are in sync with your Prakriti.",
         icon: "checkmark-circle-outline",
-        color: "text-emerald-400",
-        bg: "bg-emerald-950/40"
+        color: "#607C64",
+        bg: "bg-white border-[#E4E1D8]"
       };
     }
     if (maxVal === vata) {
@@ -1189,8 +1285,8 @@ const PredictiveWarningCard = React.memo(function PredictiveWarningCard() {
         title: "Predicted Vata Accumulation",
         warning: "Sustained high Vata (wind) is predicted to result in nervous tension, dry skin, and muscle stiffness within 36 hours. Pacify this by drinking warm liquids and avoiding dry, cold foods.",
         icon: "warning-outline",
-        color: "text-amber-400",
-        bg: "bg-amber-950/40"
+        color: "#5C788A",
+        bg: "bg-white border-[#E4E1D8]"
       };
     }
     if (maxVal === pitta) {
@@ -1198,26 +1294,26 @@ const PredictiveWarningCard = React.memo(function PredictiveWarningCard() {
         title: "Predicted Pitta Aggravation",
         warning: "Sustained high Pitta (fire/heat) is predicted to trigger digestive acidity, skin redness, or sleep disturbance within 24 hours. Balance this by taking cooling fluids and sweet fruits.",
         icon: "flame-outline",
-        color: "text-orange-400",
-        bg: "bg-orange-950/40"
+        color: "#C07A65",
+        bg: "bg-white border-[#E4E1D8]"
       };
     }
     return {
       title: "Predicted Kapha Stagnation",
       warning: "Elevated Kapha (earth/water) indicates a risk of respiratory congestion and daytime lethargy within 48 hours. Stimulate circulation with brisk walking and warming ginger tea.",
       icon: "alert-circle-outline",
-      color: "text-purple-400",
-      bg: "bg-purple-950/40"
+      color: "#607C64",
+      bg: "bg-white border-[#E4E1D8]"
     };
   }, [vata, pitta, kapha]);
 
   return (
-    <View className={`border p-5 rounded-3xl mb-6 relative overflow-hidden ${warningDetails.bg} border-emerald-800/30`}>
+    <View className={`border p-5 rounded-3xl mb-6 relative overflow-hidden ${warningDetails.bg} shadow-sm`}>
       <View className="flex-row items-center mb-3">
-        <Ionicons name={warningDetails.icon as any} size={18} color={warningDetails.color === 'text-emerald-400' ? '#10b981' : warningDetails.color === 'text-amber-400' ? '#f59e0b' : warningDetails.color === 'text-orange-400' ? '#f97316' : '#a78bfa'} />
-        <Text className="text-white font-bold text-sm ml-2">{warningDetails.title}</Text>
+        <Ionicons name={warningDetails.icon as any} size={18} color={warningDetails.color} />
+        <Text className="text-[#2E3A2F] font-bold text-sm ml-2">{warningDetails.title}</Text>
       </View>
-      <Text className="text-emerald-100/90 text-xs leading-relaxed font-medium">
+      <Text className="text-slate-650 text-xs leading-relaxed font-medium">
         {warningDetails.warning}
       </Text>
     </View>
@@ -1231,26 +1327,26 @@ const PredictiveForecastCard = React.memo(function PredictiveForecastCard() {
   const activeResult = predictions[activeInterval];
   
   const getConfidenceLevel = (score: number) => {
-    if (score >= 80) return { label: 'High Confidence', color: 'text-emerald-400', bg: 'bg-emerald-950/60 border-emerald-500/25', dot: 'bg-emerald-500' };
-    if (score >= 60) return { label: 'Moderate Confidence', color: 'text-amber-400', bg: 'bg-amber-950/60 border-amber-900/25', dot: 'bg-amber-500' };
-    return { label: 'Low Confidence', color: 'text-rose-400', bg: 'bg-rose-950/60 border-rose-900/25', dot: 'bg-rose-500' };
+    if (score >= 80) return { label: 'High Confidence', color: 'text-[#607C64]', bg: 'bg-[#F5F2EA]/45 border-[#E4E1D8]', dot: 'bg-[#607C64]' };
+    if (score >= 60) return { label: 'Moderate Confidence', color: 'text-amber-600', bg: 'bg-amber-500/5 border-amber-500/10', dot: 'bg-amber-500' };
+    return { label: 'Low Confidence', color: 'text-rose-600', bg: 'bg-rose-500/5 border-rose-500/10', dot: 'bg-rose-500' };
   };
 
   const confidenceTheme = getConfidenceLevel(activeResult.confidenceScore);
 
   return (
-    <View className="bg-[#051f18]/30 border border-emerald-800/30 p-5 rounded-3xl mb-6">
+    <View className="bg-white border border-[#E4E1D8] p-5 rounded-3xl mb-6 shadow-sm shadow-[#E4E1D8]/30">
       <View className="flex-row justify-between items-center mb-3">
-        <Text className="text-white text-base font-extrabold flex-row items-center">
-          <Ionicons name="sparkles" size={16} color="#34d399" style={{ marginRight: 6 }} /> Predictive Health Forecast
+        <Text className="text-[#2E3A2F] text-base font-extrabold flex-row items-center font-serif">
+          <Ionicons name="sparkles" size={16} color="#607C64" style={{ marginRight: 6 }} /> Predictive Health Forecast
         </Text>
-        <View className="bg-emerald-950/60 border border-emerald-900/35 px-2 py-0.5 rounded-full">
-          <Text className="text-emerald-400 text-[8px] font-mono uppercase">Density: {predictions.dataDensityScore}%</Text>
+        <View className="bg-[#F2EFE8] border border-[#E4E1D8] px-2 py-0.5 rounded-full">
+          <Text className="text-[#607C64] text-[8px] font-mono uppercase">Density: {predictions.dataDensityScore}%</Text>
         </View>
       </View>
 
       {/* Interval Tabs */}
-      <View className="flex-row bg-emerald-950/45 p-1 rounded-xl border border-emerald-900/20 mb-4">
+      <View className="flex-row bg-[#F2EFE8] p-1 rounded-xl border border-[#E4E1D8] mb-4">
         {(['tomorrow', 'next3Days', 'nextWeek'] as const).map((interval) => {
           const isSelected = activeInterval === interval;
           const label = interval === 'tomorrow' ? 'Tomorrow' : interval === 'next3Days' ? 'Next 3 Days' : 'Next Week';
@@ -1259,10 +1355,10 @@ const PredictiveForecastCard = React.memo(function PredictiveForecastCard() {
               key={interval}
               onPress={() => setActiveInterval(interval)}
               className={`flex-1 py-2 rounded-lg items-center ${
-                isSelected ? 'bg-emerald-500' : 'bg-transparent'
+                isSelected ? 'bg-[#7D9C83]' : 'bg-transparent'
               }`}
             >
-              <Text className={`text-[10px] font-bold ${isSelected ? 'text-emerald-950' : 'text-emerald-400/80'}`}>
+              <Text className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-[#607C64]/80'}`}>
                 {label}
               </Text>
             </TouchableOpacity>
@@ -1276,55 +1372,55 @@ const PredictiveForecastCard = React.memo(function PredictiveForecastCard() {
           <View className={`w-2 h-2 rounded-full mr-2 ${confidenceTheme.dot}`} />
           <View className="flex-1">
             <Text className={`text-[10px] font-bold ${confidenceTheme.color}`}>{confidenceTheme.label} ({activeResult.confidenceScore}%)</Text>
-            <Text className="text-emerald-200/50 text-[8px] leading-tight mt-0.5">{activeResult.confidenceExplanation}</Text>
+            <Text className="text-slate-500 text-[8px] leading-tight mt-0.5">{activeResult.confidenceExplanation}</Text>
           </View>
         </View>
-        <Ionicons name="information-circle-outline" size={15} color="#34d399" />
+        <Ionicons name="information-circle-outline" size={15} color="#607C64" />
       </View>
 
       {/* Vitals Forecast */}
-      <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-2.5">Expected Vitals</Text>
-      <View className="bg-emerald-950/20 p-3 rounded-2xl border border-emerald-900/10 mb-4">
-        <ForecastProgress label="System Recovery" value={activeResult.target.recovery} color="bg-emerald-500" />
-        <ForecastProgress label="Circadian Energy" value={activeResult.target.energy} color="bg-sky-400" />
-        <ForecastProgress label="Sleep Restoration" value={activeResult.target.sleep} color="bg-violet-400" />
+      <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-wider mb-2.5 font-mono">Expected Vitals</Text>
+      <View className="bg-[#F8F6F0] p-3 rounded-2xl border border-[#E4E1D8] mb-4">
+        <ForecastProgress label="System Recovery" value={activeResult.target.recovery} color="bg-[#607C64]" />
+        <ForecastProgress label="Circadian Energy" value={activeResult.target.energy} color="bg-[#5C788A]" />
+        <ForecastProgress label="Sleep Restoration" value={activeResult.target.sleep} color="bg-[#7A9482]" />
       </View>
 
       {/* Constitutional Forecast */}
       <View className="flex-row justify-between items-center mb-2.5">
-        <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider">Constitutional Balance</Text>
-        <View className="bg-orange-500/15 border border-orange-500/30 px-2 py-0.5 rounded">
-          <Text className="text-orange-400 text-[8px] font-bold uppercase">{activeResult.target.primaryAggravation} Aggravation</Text>
+        <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-wider font-mono">Constitutional Balance</Text>
+        <View className="bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded">
+          <Text className="text-orange-600 text-[8px] font-bold uppercase">{activeResult.target.primaryAggravation} Aggravation</Text>
         </View>
       </View>
-      <View className="bg-emerald-950/20 p-3 rounded-2xl border border-emerald-900/10 mb-4">
-        <ForecastProgress label="Vata (Wind/Air)" value={activeResult.target.dosha.vata} color="bg-amber-500" unit="%" />
-        <ForecastProgress label="Pitta (Fire/Water)" value={activeResult.target.dosha.pitta} color="bg-red-500" unit="%" />
-        <ForecastProgress label="Kapha (Water/Earth)" value={activeResult.target.dosha.kapha} color="bg-sky-500" unit="%" />
+      <View className="bg-[#F8F6F0] p-3 rounded-2xl border border-[#E4E1D8] mb-4">
+        <ForecastProgress label="Vata (Wind/Air)" value={activeResult.target.dosha.vata} color="bg-[#5C788A]" unit="%" />
+        <ForecastProgress label="Pitta (Fire/Water)" value={activeResult.target.dosha.pitta} color="bg-[#C07A65]" unit="%" />
+        <ForecastProgress label="Kapha (Water/Earth)" value={activeResult.target.dosha.kapha} color="bg-[#7A9482]" unit="%" />
       </View>
 
       {/* Engine Scores Forecast */}
-      <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-2.5">Bio-Engine Scores</Text>
+      <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-wider mb-2.5 font-mono">Bio-Engine Scores</Text>
       <View className="flex-row space-x-3 mb-4">
-        <View className="flex-1 bg-emerald-950/20 p-3 rounded-2xl border border-emerald-900/10">
-          <ForecastProgress label="Expected Agni" value={activeResult.target.agni} color="bg-amber-400" />
+        <View className="flex-1 bg-[#F8F6F0] p-3 rounded-2xl border border-[#E4E1D8]">
+          <ForecastProgress label="Expected Agni" value={activeResult.target.agni} color="bg-[#C07A65]" />
         </View>
-        <View className="flex-1 bg-emerald-950/20 p-3 rounded-2xl border border-emerald-900/10">
-          <ForecastProgress label="Expected Ojas" value={activeResult.target.ojas} color="bg-violet-400" />
+        <View className="flex-1 bg-[#F8F6F0] p-3 rounded-2xl border border-[#E4E1D8]">
+          <ForecastProgress label="Expected Ojas" value={activeResult.target.ojas} color="bg-[#607C64]" />
         </View>
       </View>
 
       {/* Key Driver Analysis */}
-      <View className="bg-emerald-950/40 border border-emerald-900/30 p-4 rounded-2xl mb-1">
-        <Text className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-1.5 flex-row items-center">
+      <View className="bg-[#F5F2EA] border border-[#E4E1D8] p-4 rounded-2xl mb-1">
+        <Text className="text-[#607C64] text-[10px] font-bold uppercase tracking-wider mb-1.5 flex-row items-center font-mono">
           <Ionicons name="git-branch-outline" size={10} style={{ marginRight: 4 }} /> Key Trend Driver
         </Text>
-        <Text className="text-white text-xs leading-relaxed mb-3">{activeResult.keyDriver}</Text>
+        <Text className="text-[#2E3A2F] text-xs leading-relaxed mb-3">{activeResult.keyDriver}</Text>
 
-        <Text className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-1.5 flex-row items-center">
+        <Text className="text-[#607C64] text-[10px] font-bold uppercase tracking-wider mb-1.5 flex-row items-center font-mono">
           <Ionicons name="shield-checkmark" size={10} style={{ marginRight: 4 }} /> Recommendation
         </Text>
-        <Text className="text-emerald-300 text-xs leading-relaxed">{activeResult.recommendation}</Text>
+        <Text className="text-[#607C64] text-xs leading-relaxed font-semibold">{activeResult.recommendation}</Text>
       </View>
     </View>
   );
@@ -1334,10 +1430,10 @@ const ForecastProgress = ({ label, value, color, unit = '%' }: { label: string; 
   return (
     <View className="mb-2">
       <View className="flex-row justify-between mb-0.5">
-        <Text className="text-emerald-300/80 text-[9px] font-sans font-medium">{label}</Text>
-        <Text className="text-white text-[9px] font-mono font-bold">{value}{unit}</Text>
+        <Text className="text-slate-650 text-[9px] font-sans font-medium">{label}</Text>
+        <Text className="text-[#2E3A2F] text-[9px] font-mono font-bold">{value}{unit}</Text>
       </View>
-      <View className="w-full h-1.5 bg-emerald-950 rounded-full overflow-hidden">
+      <View className="w-full h-1.5 bg-[#E4E1D8] rounded-full overflow-hidden">
         <View style={{ width: `${value}%` }} className={`h-full rounded-full ${color}`} />
       </View>
     </View>

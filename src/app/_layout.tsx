@@ -1,6 +1,5 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider, Stack, router, useSegments } from 'expo-router';
 import { useColorScheme, View, ActivityIndicator } from 'react-native';
-import { Stack, router } from 'expo-router';
 import { useEffect } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { initDatabase } from '../services/database';
@@ -39,6 +38,7 @@ function InitialLayout() {
   const { isLoaded, isSignedIn, userId, getToken, signOut: clerkSignOut } = useAuth();
   const { user } = useUser();
   const { profile, loading, initialized, setClerkSession, clearClerkSession } = useAuthStore();
+  const segments = useSegments();
 
   // 1. Initial setup for database
   useEffect(() => {
@@ -55,7 +55,11 @@ function InitialLayout() {
     // Bind global signOut to Clerk's authentication signout action
     useAuthStore.setState({
       signOut: async () => {
-        await clerkSignOut();
+        try {
+          await clerkSignOut();
+        } catch (err) {
+          console.log('[RootLayout] SignOut error:', err);
+        }
         clearClerkSession();
       }
     });
@@ -105,20 +109,34 @@ function InitialLayout() {
     if (!isLoaded || !initialized || loading) return;
 
     const routeTimer = setTimeout(() => {
+      const inAuthGroup = segments[0] === '(auth)';
+      const inTabsGroup = segments[0] === '(tabs)';
+
       if (!isSignedIn) {
-        router.replace('/(auth)/login');
-      } else if (!profile || !profile.dominant_dosha) {
-        // If the user exists but hasn't completed onboarding/intake
-        router.replace('/(auth)/onboarding');
+        // Not logged in: force login screen unless they are reset password
+        if (segments[0] !== '(auth)' || (segments[1] !== 'login' && segments[1] !== 'reset-password')) {
+          router.replace('/(auth)/login');
+        }
       } else {
-        router.replace('/(tabs)');
-        const { autoConnectLastPairedDevice } = require('../services/bleManager');
-        autoConnectLastPairedDevice().catch((err: any) => console.log('[BLE] Login autoconnect failed:', err));
+        // Logged in
+        if (!profile || !profile.dominant_dosha) {
+          // Intake not complete: redirect to onboarding unless already there
+          if (segments[1] !== 'onboarding') {
+            router.replace('/(auth)/onboarding');
+          }
+        } else {
+          // Intake complete: go to tabs, unless explicitly viewing onboarding (to redo assessment)
+          if (inAuthGroup && segments[1] !== 'onboarding') {
+            router.replace('/(tabs)');
+          } else if (!inAuthGroup && !inTabsGroup) {
+            router.replace('/(tabs)');
+          }
+        }
       }
     }, 100);
 
     return () => clearTimeout(routeTimer);
-  }, [isLoaded, isSignedIn, initialized, loading, profile?.dominant_dosha]);
+  }, [isLoaded, isSignedIn, initialized, loading, profile?.dominant_dosha, segments]);
 
   // Premium full screen loader during auth handshake
   if (!isLoaded || !initialized || (isSignedIn && loading)) {

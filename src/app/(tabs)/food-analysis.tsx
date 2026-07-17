@@ -342,45 +342,45 @@ export default function FoodAnalysisScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#091310' }}>
-      <LinearGradient colors={['#091310', '#111d19']} className="flex-1">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F6F0' }}>
+      <LinearGradient colors={['#F8F6F0', '#F2EFE8']} className="flex-1">
         
         {/* Header */}
-        <View className="px-6 py-4 flex-row items-center border-b border-[#1f372f]">
+        <View className="px-6 py-4 flex-row items-center border-b border-[#E4E1D8]">
           <TouchableOpacity 
             onPress={() => router.back()} 
-            className="p-1.5 rounded-lg bg-[#172722] border border-[#1f372f] mr-4 active:bg-emerald-900/20"
+            className="p-1.5 rounded-lg bg-[#F2EFE8] border border-[#E4E1D8] mr-4 active:bg-[#E4E1D8]/50"
           >
-            <Ionicons name="chevron-back" size={20} color="#34d399" />
+            <Ionicons name="chevron-back" size={20} color="#607C64" />
           </TouchableOpacity>
           <View>
-            <Text className="text-white text-base font-serif font-black">Food Scanner</Text>
-            <Text className="text-emerald-400 text-[8px] uppercase font-bold tracking-widest font-mono">Ayurvedic Nutrient Intelligence</Text>
+            <Text className="text-[#2E3A2F] text-base font-serif font-black">Food Scanner</Text>
+            <Text className="text-[#607C64]/70 text-[8px] uppercase font-bold tracking-widest font-mono">Ayurvedic Nutrient Intelligence</Text>
           </View>
         </View>
 
         <ScrollView contentContainerStyle={{ paddingBottom: 40 }} className="px-6 py-6" showsVerticalScrollIndicator={false}>
           {errorMsg && (
-            <View className="bg-red-950/40 border border-red-900/40 p-4 rounded-xl mb-6">
-              <Text className="text-red-400 text-xs text-center font-sans font-medium">{errorMsg}</Text>
+            <View className="bg-red-500/5 border border-red-500/10 p-4 rounded-xl mb-6">
+              <Text className="text-red-600 text-xs text-center font-sans font-medium">{errorMsg}</Text>
             </View>
           )}
 
           {/* VIEWPORT CAMERA SCANNER */}
           <View className="mb-6 relative">
             {imageUri ? (
-              <View className="w-full h-60 rounded-3xl overflow-hidden border border-[#1f372f] relative">
+              <View className="w-full h-60 rounded-3xl overflow-hidden border border-[#E4E1D8] relative bg-white">
                 <Image source={{ uri: imageUri }} className="w-full h-full object-cover" />
                 
                 {/* HUD Overlay Frame */}
-                <View className="absolute inset-4 border border-emerald-500/20 rounded-2xl pointer-events-none flex justify-between p-3">
+                <View className="absolute inset-4 border border-[#7D9C83]/20 rounded-2xl pointer-events-none flex justify-between p-3">
                   <View className="flex-row justify-between">
-                    <View className="w-4 h-4 border-t-2 border-l-2 border-emerald-500" />
-                    <View className="w-4 h-4 border-t-2 border-r-2 border-emerald-500" />
+                    <View className="w-4 h-4 border-t-2 border-l-2 border-[#7D9C83]" />
+                    <View className="w-4 h-4 border-t-2 border-r-2 border-[#7D9C83]" />
                   </View>
                   <View className="flex-row justify-between">
-                    <View className="w-4 h-4 border-b-2 border-l-2 border-emerald-500" />
-                    <View className="w-4 h-4 border-b-2 border-r-2 border-emerald-500" />
+                    <View className="w-4 h-4 border-b-2 border-l-2 border-[#7D9C83]" />
+                    <View className="w-4 h-4 border-b-2 border-r-2 border-[#7D9C83]" />
                   </View>
                 </View>
 
@@ -398,12 +398,12 @@ export default function FoodAnalysisScreen() {
                       left: 16,
                       right: 16,
                       height: 2,
-                      backgroundColor: '#10b981',
-                      shadowColor: '#10b981',
+                      backgroundColor: '#7D9C83',
+                      shadowColor: '#7d9c83',
                       shadowOffset: { width: 0, height: 0 },
-                      shadowOpacity: 0.8,
-                      shadowRadius: 5,
-                      elevation: 4
+                      shadowOpacity: 0.6,
+                      shadowRadius: 4,
+                      elevation: 3
                     }}
                   />
                 )}
@@ -415,23 +415,23 @@ export default function FoodAnalysisScreen() {
                     setImageBase64(null);
                     setAiResult(null);
                   }}
-                  className="absolute top-4 right-4 bg-red-950/80 border border-red-950 p-2.5 rounded-full shadow active:bg-red-900"
+                  className="absolute top-4 right-4 bg-red-100/80 border border-red-200 p-2.5 rounded-full shadow active:bg-red-200"
                 >
                   <Ionicons name="trash-outline" size={16} color="#ef4444" />
                 </TouchableOpacity>
               </View>
             ) : (
-              <View className="w-full h-60 rounded-3xl bg-[#111d19]/45 border border-[#1f372f] overflow-hidden justify-center items-center relative">
+              <View className="w-full h-60 rounded-3xl bg-white border border-[#E4E1D8] overflow-hidden justify-center items-center relative shadow-sm">
                 
                 {/* Viewfinder Target corners */}
-                <View className="absolute inset-8 border border-emerald-950 rounded-2xl pointer-events-none flex justify-between p-3">
+                <View className="absolute inset-8 border border-[#E4E1D8] rounded-2xl pointer-events-none flex justify-between p-3">
                   <View className="flex-row justify-between">
-                    <View className="w-4 h-4 border-t border-l border-emerald-500/40" />
-                    <View className="w-4 h-4 border-t border-r border-emerald-500/40" />
+                    <View className="w-4 h-4 border-t border-l border-[#607C64]/30" />
+                    <View className="w-4 h-4 border-t border-r border-[#607C64]/30" />
                   </View>
                   <View className="flex-row justify-between">
-                    <View className="w-4 h-4 border-b border-l border-emerald-500/40" />
-                    <View className="w-4 h-4 border-b border-r border-emerald-500/40" />
+                    <View className="w-4 h-4 border-b border-l border-[#607C64]/30" />
+                    <View className="w-4 h-4 border-b border-r border-[#607C64]/30" />
                   </View>
                 </View>
 
@@ -447,30 +447,30 @@ export default function FoodAnalysisScreen() {
                     left: 32,
                     right: 32,
                     height: 1,
-                    backgroundColor: '#10b981/40',
+                    backgroundColor: 'rgba(96, 124, 100, 0.3)',
                   }}
                 />
 
-                <Ionicons name="scan-outline" size={36} color="#047857" className="mb-4" />
-                <Text className="text-white text-sm font-serif font-bold text-center px-8 leading-normal mb-6">
+                <Ionicons name="scan-outline" size={36} color="#7D9C83" className="mb-4" />
+                <Text className="text-[#2E3A2F] text-sm font-serif font-black text-center px-8 leading-normal mb-6">
                   Intelligent Camera Viewfinder
                 </Text>
 
                 <View className="flex-row space-x-3 px-6">
                   <TouchableOpacity
                     onPress={handleTakePhoto}
-                    className="flex-1 bg-emerald-500 rounded-xl py-3 flex-row justify-center items-center active:bg-emerald-600 shadow"
+                    className="flex-1 bg-[#7D9C83] rounded-xl py-3 flex-row justify-center items-center active:bg-[#607C64] shadow-sm"
                   >
-                    <Ionicons name="camera" size={14} color="#022c22" style={{ marginRight: 6 }} />
-                    <Text className="text-emerald-950 font-black text-[10px] uppercase tracking-wider">Capture Snap</Text>
+                    <Ionicons name="camera" size={14} color="#ffffff" style={{ marginRight: 6 }} />
+                    <Text className="text-white font-black text-[10px] uppercase tracking-wider">Capture Snap</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     onPress={handleChoosePhoto}
-                    className="flex-1 bg-[#172722] border border-[#1f372f] rounded-xl py-3 flex-row justify-center items-center active:bg-emerald-900/10"
+                    className="flex-1 bg-[#F2EFE8] border border-[#E4E1D8] rounded-xl py-3 flex-row justify-center items-center active:bg-[#E4E1D8]/60"
                   >
-                    <Ionicons name="image" size={14} color="#34d399" style={{ marginRight: 6 }} />
-                    <Text className="text-emerald-400 font-bold text-[10px] uppercase tracking-wider">Choose File</Text>
+                    <Ionicons name="image" size={14} color="#607C64" style={{ marginRight: 6 }} />
+                    <Text className="text-[#607C64] font-bold text-[10px] uppercase tracking-wider">Choose File</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -481,17 +481,17 @@ export default function FoodAnalysisScreen() {
           <TouchableOpacity
             onPress={handleAIScan}
             disabled={scanningMeal || (!imageBase64 && !foodName.trim())}
-            className="bg-emerald-500/10 border border-emerald-500/30 py-3.5 rounded-2xl flex-row justify-center items-center mb-6 active:bg-emerald-500/25 disabled:bg-transparent disabled:border-[#1f372f]/40"
+            className="bg-white border border-[#E4E1D8] shadow-sm py-3.5 rounded-2xl flex-row justify-center items-center mb-6 active:bg-[#F2EFE8] disabled:bg-transparent disabled:border-[#E4E1D8]/40"
           >
             {scanningMeal ? (
               <>
-                <ActivityIndicator color="#34d399" className="mr-2" />
-                <Text className="text-emerald-400 font-bold text-xs uppercase tracking-wider">Consulting AI Scanner...</Text>
+                <ActivityIndicator color="#607C64" className="mr-2" />
+                <Text className="text-[#607C64] font-bold text-xs uppercase tracking-wider">Consulting AI Scanner...</Text>
               </>
             ) : (
               <>
-                <Ionicons name="sparkles" size={14} color="#10b981" style={{ marginRight: 6 }} />
-                <Text className="text-emerald-400 font-bold text-xs uppercase tracking-wider">Run Vision AI Analysis</Text>
+                <Ionicons name="sparkles" size={14} color="#7D9C83" style={{ marginRight: 6 }} />
+                <Text className="text-[#607C64] font-bold text-xs uppercase tracking-wider">Run Vision AI Analysis</Text>
               </>
             )}
           </TouchableOpacity>
@@ -501,19 +501,19 @@ export default function FoodAnalysisScreen() {
             <View className="space-y-5 mb-6">
               
               {/* Concentric Macro Nutrition Wheel & Health Score */}
-              <View className="bg-[#111d19]/45 border border-[#1f372f] p-5 rounded-3xl items-center relative overflow-hidden">
-                <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Concentric Macro Wheel</Text>
+              <View className="bg-white border border-[#E4E1D8] p-5 rounded-3xl items-center relative overflow-hidden shadow-sm shadow-[#E4E1D8]/20">
+                <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Concentric Macro Wheel</Text>
                 
                 <View className="w-48 h-48 items-center justify-center relative my-2">
                   <View className="absolute items-center z-10">
-                    <Text className="text-emerald-400/50 text-[8px] uppercase font-bold tracking-widest font-mono">Health Score</Text>
-                    <Text className="text-white text-3xl font-serif font-black">{healthScore}/100</Text>
-                    <Text className="text-emerald-400 text-[9px] font-bold font-mono mt-0.5">{aiResult.calories_kcal} kcal</Text>
+                    <Text className="text-[#607C64]/70 text-[8px] uppercase font-bold tracking-widest font-mono">Health Score</Text>
+                    <Text className="text-[#2E3A2F] text-3xl font-serif font-black">{healthScore}/100</Text>
+                    <Text className="text-[#607C64] text-[9px] font-bold font-mono mt-0.5">{aiResult.calories_kcal} kcal</Text>
                   </View>
 
                   <Svg width="160" height="160" viewBox="0 0 160 160" className="absolute">
                     {/* Fat Outer ring (Yellow) */}
-                    <Circle cx="80" cy="80" r="60" fill="none" stroke="#242111" strokeWidth="5.5" />
+                    <Circle cx="80" cy="80" r="60" fill="none" stroke="#F2EFE8" strokeWidth="5.5" />
                     <Circle
                       cx="80"
                       cy="80"
@@ -528,7 +528,7 @@ export default function FoodAnalysisScreen() {
                     />
 
                     {/* Protein Middle ring (Orange) */}
-                    <Circle cx="80" cy="80" r="46" fill="none" stroke="#2e1c12" strokeWidth="5.5" />
+                    <Circle cx="80" cy="80" r="46" fill="none" stroke="#F2EFE8" strokeWidth="5.5" />
                     <Circle
                       cx="80"
                       cy="80"
@@ -543,7 +543,7 @@ export default function FoodAnalysisScreen() {
                     />
 
                     {/* Carbs Inner ring (Sky Blue) */}
-                    <Circle cx="80" cy="80" r="32" fill="none" stroke="#0e2433" strokeWidth="5.5" />
+                    <Circle cx="80" cy="80" r="32" fill="none" stroke="#F2EFE8" strokeWidth="5.5" />
                     <Circle
                       cx="80"
                       cy="80"
@@ -563,30 +563,30 @@ export default function FoodAnalysisScreen() {
                 <View className="flex-row gap-5 mt-4">
                   <View className="flex-row items-center">
                     <View className="w-1.5 h-1.5 rounded-full bg-[#38bdf8] mr-1.5" />
-                    <Text className="text-slate-300 text-[10px] font-bold font-mono">Carbs {aiResult.carbs_g}g</Text>
+                    <Text className="text-slate-600 text-[10px] font-bold font-mono">Carbs {aiResult.carbs_g}g</Text>
                   </View>
                   <View className="flex-row items-center">
                     <View className="w-1.5 h-1.5 rounded-full bg-[#fb923c] mr-1.5" />
-                    <Text className="text-slate-300 text-[10px] font-bold font-mono">Protein {aiResult.protein_g}g</Text>
+                    <Text className="text-slate-600 text-[10px] font-bold font-mono">Protein {aiResult.protein_g}g</Text>
                   </View>
                   <View className="flex-row items-center">
                     <View className="w-1.5 h-1.5 rounded-full bg-[#facc15] mr-1.5" />
-                    <Text className="text-slate-300 text-[10px] font-bold font-mono">Fat {aiResult.fat_g}g</Text>
+                    <Text className="text-slate-600 text-[10px] font-bold font-mono">Fat {aiResult.fat_g}g</Text>
                   </View>
                 </View>
               </View>
 
               {/* Dynamic Animated Nutrient Bars */}
-              <View className="bg-[#111d19]/45 border border-[#1f372f] p-5 rounded-3xl space-y-4">
-                <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono">Macro Composition Efficiency</Text>
+              <View className="bg-white border border-[#E4E1D8] p-5 rounded-3xl space-y-4 shadow-sm shadow-[#E4E1D8]/20">
+                <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono">Macro Composition Efficiency</Text>
                 
                 {/* Carbs Bar */}
                 <View>
                   <View className="flex-row justify-between mb-1">
-                    <Text className="text-slate-300 text-xs font-bold font-sans">Carbohydrates</Text>
-                    <Text className="text-white text-xs font-mono font-bold">{aiResult.carbs_g}g</Text>
+                    <Text className="text-slate-600 text-xs font-bold font-sans">Carbohydrates</Text>
+                    <Text className="text-[#2E3A2F] text-xs font-mono font-bold">{aiResult.carbs_g}g</Text>
                   </View>
-                  <View className="h-2.5 bg-emerald-950 rounded-full overflow-hidden border border-emerald-900/10">
+                  <View className="h-2.5 bg-[#F2EFE8] rounded-full overflow-hidden border border-[#E4E1D8]/10">
                     <Animated.View 
                       style={{
                         width: carbsBarWidth.interpolate({
@@ -602,10 +602,10 @@ export default function FoodAnalysisScreen() {
                 {/* Protein Bar */}
                 <View>
                   <View className="flex-row justify-between mb-1">
-                    <Text className="text-slate-300 text-xs font-bold font-sans">Proteins</Text>
-                    <Text className="text-white text-xs font-mono font-bold">{aiResult.protein_g}g</Text>
+                    <Text className="text-slate-600 text-xs font-bold font-sans">Proteins</Text>
+                    <Text className="text-[#2E3A2F] text-xs font-mono font-bold">{aiResult.protein_g}g</Text>
                   </View>
-                  <View className="h-2.5 bg-emerald-950 rounded-full overflow-hidden border border-emerald-900/10">
+                  <View className="h-2.5 bg-[#F2EFE8] rounded-full overflow-hidden border border-[#E4E1D8]/10">
                     <Animated.View 
                       style={{
                         width: proteinBarWidth.interpolate({
@@ -621,10 +621,10 @@ export default function FoodAnalysisScreen() {
                 {/* Fat Bar */}
                 <View>
                   <View className="flex-row justify-between mb-1">
-                    <Text className="text-slate-300 text-xs font-bold font-sans">Healthy Fats</Text>
-                    <Text className="text-white text-xs font-mono font-bold">{aiResult.fat_g}g</Text>
+                    <Text className="text-slate-600 text-xs font-bold font-sans">Healthy Fats</Text>
+                    <Text className="text-[#2E3A2F] text-xs font-mono font-bold">{aiResult.fat_g}g</Text>
                   </View>
-                  <View className="h-2.5 bg-emerald-950 rounded-full overflow-hidden border border-emerald-900/10">
+                  <View className="h-2.5 bg-[#F2EFE8] rounded-full overflow-hidden border border-[#E4E1D8]/10">
                     <Animated.View 
                       style={{
                         width: fatBarWidth.interpolate({
@@ -640,10 +640,10 @@ export default function FoodAnalysisScreen() {
                 {/* Fiber Bar */}
                 <View>
                   <View className="flex-row justify-between mb-1">
-                    <Text className="text-slate-300 text-xs font-bold font-sans">Dietary Fiber</Text>
-                    <Text className="text-white text-xs font-mono font-bold">{aiResult.fiber_g}g</Text>
+                    <Text className="text-slate-600 text-xs font-bold font-sans">Dietary Fiber</Text>
+                    <Text className="text-[#2E3A2F] text-xs font-mono font-bold">{aiResult.fiber_g}g</Text>
                   </View>
-                  <View className="h-2.5 bg-emerald-950 rounded-full overflow-hidden border border-emerald-900/10">
+                  <View className="h-2.5 bg-[#F2EFE8] rounded-full overflow-hidden border border-[#E4E1D8]/10">
                     <Animated.View 
                       style={{
                         width: fiberBarWidth.interpolate({
@@ -651,32 +651,32 @@ export default function FoodAnalysisScreen() {
                           outputRange: ['0%', '100%']
                         })
                       }}
-                      className="h-full bg-emerald-400 rounded-full"
+                      className="h-full bg-[#7D9C83] rounded-full"
                     />
                   </View>
                 </View>
               </View>
 
               {/* Ayurvedic Dosha Effects & Taste Card */}
-              <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl">
-                <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Ayurvedic Elemental Effects</Text>
-                <Text className="text-white text-lg font-serif font-bold mt-1 mb-2 capitalize">
+              <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl shadow-sm">
+                <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Ayurvedic Elemental Effects</Text>
+                <Text className="text-[#2E3A2F] text-lg font-serif font-black mt-1 mb-2 capitalize">
                   {aiResult.ayurvedicTaste} taste (Rasa)
                 </Text>
-                <Text className="text-slate-300 text-xs leading-relaxed italic pl-3 border-l-2 border-emerald-500">
+                <Text className="text-slate-650 text-xs leading-relaxed italic pl-3 border-l-2 border-[#7D9C83] font-serif">
                   {aiResult.doshaImpact}
                 </Text>
               </View>
 
               {/* Agni Metabolic Impact Card */}
               {agniImpact && (
-                <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl relative overflow-hidden">
+                <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl relative overflow-hidden shadow-sm">
                   <View className="absolute right-0 top-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
-                  <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Digestive Agni Impact</Text>
-                  <Text style={{ color: agniImpact.color }} className="text-lg font-serif font-bold mt-1 mb-2">
+                  <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Digestive Agni Impact</Text>
+                  <Text style={{ color: agniImpact.color }} className="text-lg font-serif font-black mt-1 mb-2">
                     {agniImpact.label}
                   </Text>
-                  <Text className="text-slate-300 text-xs leading-relaxed">
+                  <Text className="text-slate-655 text-xs leading-relaxed">
                     {agniImpact.desc}
                   </Text>
                 </View>
@@ -684,25 +684,25 @@ export default function FoodAnalysisScreen() {
 
               {/* Ayurvedic food pairings Recommendation Cards */}
               {pairingRecommendation && (
-                <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl">
-                  <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Synergistic Pairings</Text>
-                  <Text className="text-white text-sm font-serif font-bold mt-1 mb-2">
+                <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl shadow-sm">
+                  <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Synergistic Pairings</Text>
+                  <Text className="text-[#2E3A2F] text-sm font-serif font-black mt-1 mb-2">
                     {pairingRecommendation.title}
                   </Text>
-                  <Text className="text-slate-300 text-xs leading-relaxed">
+                  <Text className="text-slate-655 text-xs leading-relaxed">
                     {pairingRecommendation.text}
                   </Text>
                 </View>
               )}
 
               {/* Micronutrients Pill Badges */}
-              <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl">
-                <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-3">Microelements Detected</Text>
+              <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl shadow-sm">
+                <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono mb-3">Microelements Detected</Text>
                 <View className="flex-row flex-wrap gap-2">
                   {Object.entries(aiResult.micronutrients).map(([key, val]) => (
-                    <View key={key} className="bg-[#172722]/50 border border-[#1f372f] px-3.5 py-2 rounded-2xl flex-row items-center">
-                      <Ionicons name="sparkles-outline" size={10} color="#10b981" style={{ marginRight: 6 }} />
-                      <Text className="text-emerald-300 text-[10px] font-mono capitalize">{key}: {val}</Text>
+                    <View key={key} className="bg-[#F5F2EA]/50 border border-[#E4E1D8] px-3.5 py-2 rounded-2xl flex-row items-center">
+                      <Ionicons name="sparkles-outline" size={10} color="#7D9C83" style={{ marginRight: 6 }} />
+                      <Text className="text-[#2E3A2F] text-[10px] font-mono capitalize">{key}: {val}</Text>
                     </View>
                   ))}
                 </View>
@@ -712,23 +712,23 @@ export default function FoodAnalysisScreen() {
           )}
 
           {/* MANUAL ENTRY PANEL FORM */}
-          <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl">
-            <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-4">Meal Particulars</Text>
+          <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl shadow-sm shadow-[#E4E1D8]/20">
+            <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono mb-4">Meal Particulars</Text>
             
             {/* Meal Category Selectors */}
-            <Text className="text-emerald-300 text-xs font-semibold mb-2">Meal Category</Text>
-            <View className="flex-row space-x-2 mb-4 bg-[#172722]/40 p-1 rounded-xl border border-[#1f372f]">
+            <Text className="text-[#607C64] text-xs font-semibold mb-2">Meal Category</Text>
+            <View className="flex-row space-x-2 mb-4 bg-[#F2EFE8] p-1 rounded-xl border border-[#E4E1D8]">
               {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((type) => (
                 <TouchableOpacity
                   key={type}
                   onPress={() => setMealType(type)}
                   className={`flex-1 rounded-lg py-2.5 items-center capitalize ${
                     mealType === type
-                      ? 'bg-emerald-500 border border-emerald-400/20'
+                      ? 'bg-[#7D9C83] border border-[#7D9C83]'
                       : 'border border-transparent'
                   }`}
                 >
-                  <Text className={`text-[10px] font-bold ${mealType === type ? 'text-emerald-950' : 'text-emerald-400/60'}`}>
+                  <Text className={`text-[10px] font-bold ${mealType === type ? 'text-white' : 'text-[#607C64]/65'}`}>
                     {type}
                   </Text>
                 </TouchableOpacity>
@@ -737,39 +737,39 @@ export default function FoodAnalysisScreen() {
 
             {/* Inputs */}
             <View className="mb-4">
-              <Text className="text-emerald-300 text-xs font-semibold mb-2">Food / Meal Name</Text>
+              <Text className="text-[#607C64] text-xs font-semibold mb-2">Food / Meal Name</Text>
               <TextInput
                 value={foodName}
                 onChangeText={setFoodName}
                 placeholder="e.g. Spiced Khichdi"
-                placeholderTextColor="#064e3b"
-                className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-3 text-white text-sm font-bold"
+                placeholderTextColor="#A3A3A3"
+                className="bg-[#F8F6F0] border border-[#E4E1D8] rounded-xl px-4 py-3 text-[#2E3A2F] text-sm font-bold font-serif"
               />
             </View>
 
             <View className="flex-row space-x-4 mb-4">
               <View className="flex-1">
-                <Text className="text-emerald-300 text-xs font-semibold mb-2">Weight (g)</Text>
+                <Text className="text-[#607C64] text-xs font-semibold mb-2">Weight (g)</Text>
                 <TextInput
                   value={weight}
                   onChangeText={setWeight}
                   placeholder="250"
-                  placeholderTextColor="#064e3b"
+                  placeholderTextColor="#A3A3A3"
                   keyboardType="numeric"
-                  className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-3 text-white text-sm font-bold"
+                  className="bg-[#F8F6F0] border border-[#E4E1D8] rounded-xl px-4 py-3 text-[#2E3A2F] text-sm font-bold"
                   style={{ fontFamily: 'monospace' }}
                 />
               </View>
 
               <View className="flex-1">
-                <Text className="text-emerald-300 text-xs font-semibold mb-2">Calories (kcal)</Text>
+                <Text className="text-[#607C64] text-xs font-semibold mb-2">Calories (kcal)</Text>
                 <TextInput
                   value={calories}
                   onChangeText={setCalories}
                   placeholder="350"
-                  placeholderTextColor="#064e3b"
+                  placeholderTextColor="#A3A3A3"
                   keyboardType="numeric"
-                  className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 py-3 text-white text-sm font-bold"
+                  className="bg-[#F8F6F0] border border-[#E4E1D8] rounded-xl px-4 py-3 text-[#2E3A2F] text-sm font-bold"
                   style={{ fontFamily: 'monospace' }}
                 />
               </View>
@@ -778,36 +778,36 @@ export default function FoodAnalysisScreen() {
             {/* Advanced collapsible macronutrients section */}
             <TouchableOpacity
               onPress={() => setShowAdvanced(!showAdvanced)}
-              className="flex-row items-center justify-between py-3.5 mb-4 border-t border-[#1f372f]/40"
+              className="flex-row items-center justify-between py-3.5 mb-4 border-t border-[#E4E1D8]/65"
             >
-              <Text className="text-emerald-300 font-bold text-xs">Macro details (Carbs, Protein, Fat)</Text>
-              <Ionicons name={showAdvanced ? 'chevron-up' : 'chevron-down'} size={16} color="#34d399" />
+              <Text className="text-[#607C64] font-bold text-xs">Macro details (Carbs, Protein, Fat)</Text>
+              <Ionicons name={showAdvanced ? 'chevron-up' : 'chevron-down'} size={16} color="#607C64" />
             </TouchableOpacity>
 
             {showAdvanced && (
-              <View className="space-y-3 mb-4 bg-[#172722]/20 p-4 rounded-xl border border-[#1f372f]/40">
+              <View className="space-y-3 mb-4 bg-[#F5F2EA]/40 p-4 rounded-xl border border-[#E4E1D8]">
                 <View className="flex-row space-x-4">
                   <View className="flex-1">
-                    <Text className="text-emerald-400/70 text-[10px] font-bold mb-1">Carbs (g)</Text>
+                    <Text className="text-[#607C64]/70 text-[10px] font-bold mb-1">Carbs (g)</Text>
                     <TextInput
                       value={carbs}
                       onChangeText={setCarbs}
                       placeholder="Auto"
-                      placeholderTextColor="#064e3b"
+                      placeholderTextColor="#A3A3A3"
                       keyboardType="numeric"
-                      className="bg-[#172722] border border-[#1f372f] rounded-lg p-2.5 text-white text-xs font-bold"
+                      className="bg-[#F8F6F0] border border-[#E4E1D8] rounded-lg p-2.5 text-[#2E3A2F] text-xs font-bold"
                       style={{ fontFamily: 'monospace' }}
                     />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-emerald-400/70 text-[10px] font-bold mb-1">Protein (g)</Text>
+                    <Text className="text-[#607C64]/70 text-[10px] font-bold mb-1">Protein (g)</Text>
                     <TextInput
                       value={protein}
                       onChangeText={setProtein}
                       placeholder="Auto"
-                      placeholderTextColor="#064e3b"
+                      placeholderTextColor="#A3A3A3"
                       keyboardType="numeric"
-                      className="bg-[#172722] border border-[#1f372f] rounded-lg p-2.5 text-white text-xs font-bold"
+                      className="bg-[#F8F6F0] border border-[#E4E1D8] rounded-lg p-2.5 text-[#2E3A2F] text-xs font-bold"
                       style={{ fontFamily: 'monospace' }}
                     />
                   </View>
@@ -815,26 +815,26 @@ export default function FoodAnalysisScreen() {
 
                 <View className="flex-row space-x-4">
                   <View className="flex-1">
-                    <Text className="text-emerald-400/70 text-[10px] font-bold mb-1">Fat (g)</Text>
+                    <Text className="text-[#607C64]/70 text-[10px] font-bold mb-1">Fat (g)</Text>
                     <TextInput
                       value={fat}
                       onChangeText={setFat}
                       placeholder="Auto"
-                      placeholderTextColor="#064e3b"
+                      placeholderTextColor="#A3A3A3"
                       keyboardType="numeric"
-                      className="bg-[#172722] border border-[#1f372f] rounded-lg p-2.5 text-white text-xs font-bold"
+                      className="bg-[#F8F6F0] border border-[#E4E1D8] rounded-lg p-2.5 text-[#2E3A2F] text-xs font-bold"
                       style={{ fontFamily: 'monospace' }}
                     />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-emerald-400/70 text-[10px] font-bold mb-1">Fiber (g)</Text>
+                    <Text className="text-[#607C64]/70 text-[10px] font-bold mb-1">Fiber (g)</Text>
                     <TextInput
                       value={fiber}
                       onChangeText={setFiber}
                       placeholder="Auto"
-                      placeholderTextColor="#064e3b"
+                      placeholderTextColor="#A3A3A3"
                       keyboardType="numeric"
-                      className="bg-[#172722] border border-[#1f372f] rounded-lg p-2.5 text-white text-xs font-bold"
+                      className="bg-[#F8F6F0] border border-[#E4E1D8] rounded-lg p-2.5 text-[#2E3A2F] text-xs font-bold"
                       style={{ fontFamily: 'monospace' }}
                     />
                   </View>
@@ -845,19 +845,19 @@ export default function FoodAnalysisScreen() {
             <TouchableOpacity
               onPress={handleSubmit}
               disabled={loading || uploadingImage || scanningMeal}
-              className="bg-emerald-500 rounded-2xl py-4 flex-row justify-center items-center shadow-lg active:bg-emerald-600 disabled:bg-[#172722]/30"
+              className="bg-[#7D9C83] rounded-2xl py-4 flex-row justify-center items-center shadow-md active:bg-[#607C64] disabled:bg-slate-300"
             >
               {loading || uploadingImage || scanningMeal ? (
                 <View className="flex-row items-center">
-                  <ActivityIndicator color="#022c22" />
-                  <Text className="text-emerald-950 text-xs font-bold ml-2">
+                  <ActivityIndicator color="#ffffff" />
+                  <Text className="text-white text-xs font-bold ml-2">
                     {uploadingImage ? 'Uploading meal photo...' : scanningMeal ? 'Consulting AI Vision...' : 'Logging nutrition...'}
                   </Text>
                 </View>
               ) : (
                 <>
-                  <Ionicons name="restaurant-outline" size={15} color="#022c22" className="mr-2" />
-                  <Text className="text-emerald-950 text-xs font-black uppercase tracking-wider">Log & Analyze Meal</Text>
+                  <Ionicons name="restaurant-outline" size={15} color="#ffffff" className="mr-2" />
+                  <Text className="text-white text-xs font-black uppercase tracking-wider">Log & Analyze Meal</Text>
                 </>
               )}
             </TouchableOpacity>

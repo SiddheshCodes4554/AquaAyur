@@ -45,87 +45,87 @@ export default function ProfileScreen() {
   const info = DOSHA_DESCRIPTIONS[baseDosha] || DOSHA_DESCRIPTIONS.vata;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#020b08' }}>
-      <LinearGradient colors={['#03120f', '#010605']} className="flex-1">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F6F0' }}>
+      <LinearGradient colors={['#F8F6F0', '#F2EFE8']} className="flex-1">
         <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 110 }} className="px-6 py-4" showsVerticalScrollIndicator={false}>
           
           {/* Header */}
           <View className="flex-row justify-between items-center mb-6 mt-2">
             <View>
-              <Text className="text-emerald-400/50 text-[10px] font-bold uppercase tracking-wider">Account Settings</Text>
-              <Text className="text-white text-2xl font-bold font-sans">Your Profile</Text>
+              <Text className="text-[#607C64] text-[10px] font-bold uppercase tracking-wider font-mono">Account Settings</Text>
+              <Text className="text-[#2E3A2F] text-2xl font-serif font-black">Your Profile</Text>
             </View>
             <TouchableOpacity
               onPress={() => router.push('/(tabs)/settings')}
-              className="bg-[#051f18]/40 p-2.5 rounded-xl border border-emerald-900/30 active:bg-emerald-900/20"
+              className="bg-[#F2EFE8] p-2.5 rounded-xl border border-[#E4E1D8] active:bg-[#F2EFE8]/80"
             >
-              <Ionicons name="settings-outline" size={18} color="#34d399" />
+              <Ionicons name="settings-outline" size={18} color="#607C64" />
             </TouchableOpacity>
           </View>
 
           {/* User Card */}
-          <View className="bg-[#051f18]/30 border border-emerald-800/30 p-6 rounded-3xl mb-6 items-center relative overflow-hidden">
+          <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl mb-6 items-center relative overflow-hidden shadow-sm shadow-[#E4E1D8]/30">
             <View className="absolute right-0 top-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
             
-            <View className="w-22 h-22 rounded-full bg-emerald-950/80 border border-emerald-500/30 justify-center items-center overflow-hidden mb-4 shadow-lg shadow-black/25">
+            <View className="w-22 h-22 rounded-full bg-[#F8F6F0] border border-[#E4E1D8] justify-center items-center overflow-hidden mb-4 shadow-sm">
               {profile?.avatar_url ? (
                 <Image source={{ uri: profile.avatar_url }} className="w-full h-full" />
               ) : (
-                <Ionicons name="person" size={40} color="#10b981" />
+                <Ionicons name="person" size={40} color="#607C64" />
               )}
             </View>
 
-            <Text className="text-white text-lg font-bold">{profile?.full_name || 'Yogi'}</Text>
+            <Text className="text-[#2E3A2F] text-lg font-bold">{profile?.full_name || 'Yogi'}</Text>
             
-            <View className="bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 py-1 mt-2.5">
-              <Text className="text-emerald-400 text-[10px] font-bold uppercase tracking-widest font-mono">
+            <View className="bg-[#F2EFE8] border border-[#E4E1D8] rounded-full px-4 py-1 mt-2.5">
+              <Text className="text-[#607C64] text-[10px] font-bold uppercase tracking-widest font-mono">
                 {profile?.dominant_dosha || 'Establishing Dosha'}
               </Text>
             </View>
           </View>
 
           {/* Physical Vitals Dashboard */}
-          <View className="bg-[#051f18]/30 border border-emerald-800/30 p-6 rounded-3xl mb-6">
+          <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl mb-6 shadow-sm shadow-[#E4E1D8]/30">
             <View className="flex-row items-center mb-4">
-              <Ionicons name="body-outline" size={16} color="#10b981" />
-              <Text className="text-white font-bold text-sm ml-2">Baseline Physicals</Text>
+              <Ionicons name="body-outline" size={16} color="#607C64" />
+              <Text className="text-[#2E3A2F] font-bold text-sm ml-2">Baseline Physicals</Text>
             </View>
             
-            <View className="flex-row justify-between py-3 border-b border-emerald-900/20">
-              <Text className="text-emerald-300/60 text-xs">Height</Text>
-              <Text className="text-white font-bold text-xs font-mono">
+            <View className="flex-row justify-between py-3 border-b border-[#E4E1D8]/60">
+              <Text className="text-slate-500 text-xs">Height</Text>
+              <Text className="text-[#2E3A2F] font-bold text-xs font-mono">
                 {profile?.height_cm ? `${profile.height_cm} cm` : 'Not Configured'}
               </Text>
             </View>
 
-            <View className="flex-row justify-between py-3 border-b border-emerald-900/20">
-              <Text className="text-emerald-300/60 text-xs">Weight</Text>
-              <Text className="text-white font-bold text-xs font-mono">
+            <View className="flex-row justify-between py-3 border-b border-[#E4E1D8]/60">
+              <Text className="text-slate-500 text-xs">Weight</Text>
+              <Text className="text-[#2E3A2F] font-bold text-xs font-mono">
                 {profile?.weight_kg ? `${profile.weight_kg} kg` : 'Not Configured'}
               </Text>
             </View>
 
             <View className="flex-row justify-between py-3">
-              <Text className="text-emerald-300/60 text-xs">Daily Hydration Target</Text>
-              <Text className="text-white font-bold text-xs font-mono">
+              <Text className="text-slate-500 text-xs">Daily Hydration Target</Text>
+              <Text className="text-[#2E3A2F] font-bold text-xs font-mono">
                 {profile?.daily_water_goal_ml ? `${profile.daily_water_goal_ml} ml` : '2,500 ml'}
               </Text>
             </View>
           </View>
 
           {/* Ayurvedic Constitution Info Card */}
-          <View className="bg-[#051f18]/30 border border-emerald-800/30 p-6 rounded-3xl">
+          <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl shadow-sm shadow-[#E4E1D8]/30">
             <View className="flex-row items-center mb-4">
-              <Ionicons name="book-outline" size={16} color="#10b981" />
-              <Text className="text-white font-bold text-sm ml-2">Prakriti Analysis</Text>
+              <Ionicons name="book-outline" size={16} color="#607C64" />
+              <Text className="text-[#2E3A2F] font-bold text-sm ml-2">Prakriti Analysis</Text>
             </View>
 
-            <Text className={`font-bold text-sm mb-2.5 ${info.color}`}>{info.title}</Text>
-            <Text className="text-emerald-100/90 text-xs leading-relaxed mb-4">{info.description}</Text>
+            <Text className={`font-bold text-sm mb-2.5 ${info.color.includes('emerald') ? 'text-[#607C64]' : info.color.includes('orange') ? 'text-[#C07A65]' : 'text-[#5C788A]'}`}>{info.title}</Text>
+            <Text className="text-slate-650 text-xs leading-relaxed mb-4">{info.description}</Text>
             
-            <View className="bg-emerald-950/80 p-4 rounded-xl border border-emerald-900/30">
-              <Text className="text-emerald-300 text-[10px] font-bold uppercase tracking-wider mb-1">Key Traits</Text>
-              <Text className="text-white text-xs leading-relaxed">{info.traits}</Text>
+            <View className="bg-[#F5F2EA] p-4 rounded-xl border border-[#E4E1D8]">
+              <Text className="text-[#607C64] text-[10px] font-bold uppercase tracking-wider mb-1 font-mono">Key Traits</Text>
+              <Text className="text-slate-600 text-xs leading-relaxed">{info.traits}</Text>
             </View>
           </View>
 

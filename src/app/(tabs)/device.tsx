@@ -173,10 +173,30 @@ export default function DeviceScreen() {
 
   const getStatusDetails = () => {
     switch (status) {
-      case 'connected': return { label: 'Connected', text: 'text-emerald-400', dot: 'bg-emerald-400 shadow-emerald-400/50' };
-      case 'connecting': return { label: 'Connecting', text: 'text-amber-400', dot: 'bg-amber-400 shadow-amber-400/50' };
-      case 'scanning': return { label: 'Scanning', text: 'text-sky-400', dot: 'bg-sky-400 shadow-sky-400/50' };
-      default: return { label: 'Disconnected', text: 'text-rose-500', dot: 'bg-rose-500' };
+      case 'connected': 
+        return { 
+          label: 'Connected', 
+          text: 'text-emerald-400', 
+          dotStyle: { backgroundColor: '#10b981', shadowColor: '#10b981', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 4, elevation: 2 } 
+        };
+      case 'connecting': 
+        return { 
+          label: 'Connecting', 
+          text: 'text-amber-400', 
+          dotStyle: { backgroundColor: '#f59e0b', shadowColor: '#f59e0b', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 4, elevation: 2 } 
+        };
+      case 'scanning': 
+        return { 
+          label: 'Scanning', 
+          text: 'text-sky-400', 
+          dotStyle: { backgroundColor: '#38bdf8', shadowColor: '#38bdf8', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 4, elevation: 2 } 
+        };
+      default: 
+        return { 
+          label: 'Disconnected', 
+          text: 'text-rose-500', 
+          dotStyle: { backgroundColor: '#ef4444' } 
+        };
     }
   };
 
@@ -211,7 +231,7 @@ export default function DeviceScreen() {
             <View className="w-full flex-row justify-between items-center mb-6">
               <Text className="text-white text-xs font-bold font-serif">Connection Hub</Text>
               <View className="flex-row items-center bg-[#172722]/80 border border-[#1f372f]/60 px-3 py-1 rounded-full">
-                <View className={`w-2 h-2 rounded-full mr-2 ${getStatusDetails().dot}`} />
+                <View className="w-2 h-2 rounded-full mr-2" style={getStatusDetails().dotStyle} />
                 <Text className={`text-[9px] font-bold uppercase font-mono tracking-widest ${getStatusDetails().text}`}>
                   {getStatusDetails().label}
                 </Text>
@@ -337,7 +357,7 @@ export default function DeviceScreen() {
               ) : (
                 <TouchableOpacity
                   onPress={handleScanToggle}
-                  className="bg-emerald-500 rounded-2xl py-3.5 w-full flex-row justify-center items-center shadow shadow-emerald-500/20 active:bg-emerald-600"
+                  className="bg-emerald-500 rounded-2xl py-3.5 w-full flex-row justify-center items-center shadow shadow-emerald-500/20 active:bg-emerald-600 will-change-variable"
                 >
                   {status === 'scanning' ? (
                     <>

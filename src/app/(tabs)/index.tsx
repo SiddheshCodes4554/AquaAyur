@@ -17,7 +17,20 @@ import { useDigitalTwinStore } from '../../store/useDigitalTwinStore';
 import { useDinacharyaStore } from '../../store/useDinacharyaStore';
 import { triggerSync } from '../../services/syncManager';
 import AyurExplanationSheet from '../../components/AyurExplanationSheet';
+import AyurConceptExplanationSheet from '../../components/AyurConceptExplanationSheet';
+import { ConceptId } from '../../services/conceptExplanations';
+import { generateDailyStory } from '../../services/dailyStoryEngine';
 import { getExplanationForRecommendation, ExplanationContext } from '../../services/recommendationExplainer';
+import { useExperienceStore } from '../../store/useExperienceStore';
+import { ExperienceSwitch } from '../../components/ExperienceSwitch';
+import { 
+  getLocalizedDoshaState, 
+  getLocalizedAgni, 
+  getLocalizedOjas, 
+  getLocalizedHeartRate, 
+  getLocalizedTemperature, 
+  getLocalizedMovement 
+} from '../../services/translationEngine';
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 
@@ -25,6 +38,9 @@ export default function DashboardScreen() {
   const profile = useAuthStore(state => state.profile);
   const user = useAuthStore(state => state.user);
   const signOut = useAuthStore(state => state.signOut);
+
+  // Experience Mode
+  const { mode, locale, setLocale, welcomeDismissed, setWelcomeDismissed } = useExperienceStore();
 
   // Zustand Store states
   const todayAgni = useAgniStore(state => state.todayAgni);
@@ -34,6 +50,7 @@ export default function DashboardScreen() {
   const { todayTotalMl, fetchTodayLogs, logWater, pendingSyncCount: hydrationPending } = useHydrationStore();
   const telemetryPending = useTelemetryStore(state => state.pendingSyncCount);
   const sleepPending = useSleepStore(state => state.pendingSyncCount);
+  const sleepHistory = useSleepStore(state => state.sleepHistory);
   const totalPending = hydrationPending + telemetryPending + sleepPending;
   const liveData = useSensorStore(state => state.liveData);
   const sensorStatus = useSensorStore(state => state.status);
@@ -43,6 +60,79 @@ export default function DashboardScreen() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [explanationVisible, setExplanationVisible] = useState(false);
   const [explanationContext, setExplanationContext] = useState<ExplanationContext | null>(null);
+  const [selectedConcept, setSelectedConcept] = useState<ConceptId | null>(null);
+
+  // Wellness View Plain Language Translations
+  const getHeartRateTranslation = (hr: number) => {
+    return getLocalizedHeartRate(hr, locale);
+  };
+
+  const getTempTranslation = (temp: number) => {
+    return getLocalizedTemperature(temp, locale);
+  };
+
+  const getStepsTranslation = (steps: number) => {
+    return getLocalizedMovement(steps, locale);
+  };
+
+  const getWellnessTranslations = () => {
+    const vataVal = currentDosha?.vata || 33.3;
+    const pittaVal = currentDosha?.pitta || 33.3;
+    const kaphaVal = currentDosha?.kapha || 33.4;
+
+    const translated = getLocalizedDoshaState(vataVal, pittaVal, kaphaVal, locale);
+
+    const agniScore = todayAgni?.agni_score || agni || 75;
+    const ojasScore = todayOjas?.ojas_score || ojas || 78;
+
+    const warnings: string[] = [];
+    if (agniScore <= 70) {
+      warnings.push(locale === 'sa' ? "Mandāgni saṁvedanaśīlā asti." : "Your digestion may be slightly slower today.");
+    }
+    if (ojasScore <= 75) {
+      warnings.push(locale === 'sa' ? "Ojo-kṣayaḥ viśrāmaḥ āvaśyakaḥ." : "Your body may need additional recovery today.");
+    }
+
+    return {
+      stateText: translated.whatIsHappening,
+      whyText: translated.why,
+      actionText: translated.whatTodo,
+      nextText: translated.whatNextDay,
+      warnings
+    };
+  };
+
+  const getDailyStory = () => {
+    const vataVal = currentDosha?.vata || 33.3;
+    const pittaVal = currentDosha?.pitta || 33.3;
+    const kaphaVal = currentDosha?.kapha || 33.4;
+
+    const agniScore = todayAgni?.agni_score || agni || 75;
+    const ojasScore = todayOjas?.ojas_score || ojas || 78;
+
+    const sleepMin = sleepHistory && sleepHistory.length > 0 ? sleepHistory[0].duration_minutes : 0;
+    const avgSleepMin = sleepHistory && sleepHistory.length > 0 
+      ? Math.round(sleepHistory.reduce((s, v) => s + v.duration_minutes, 0) / sleepHistory.length)
+      : 480;
+
+    return generateDailyStory({
+      userName: profile?.first_name || 'Yogi',
+      dominantDosha: profile?.dominant_dosha || 'tridoshic',
+      vata: vataVal,
+      pitta: pittaVal,
+      kapha: kaphaVal,
+      agni: agniScore,
+      ojas: ojasScore,
+      sleepMinutes: sleepMin,
+      avgSleepMinutes: avgSleepMin,
+      heartRate: liveData?.heartRate || 0,
+      avgHeartRate: 70,
+      temperature: liveData?.temperature || 0,
+      avgTemperature: 36.5,
+      steps: liveData?.steps || 0,
+      waterMl: todayTotalMl || 0
+    });
+  };
 
   const handleOpenExplanation = (recommendationTitle: string) => {
     const biometricsSnapshot = liveData ? {
@@ -208,19 +298,19 @@ export default function DashboardScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#091310' }}>
-      <LinearGradient colors={['#091310', '#111d19']} className="flex-1">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F6F0' }}>
+      <LinearGradient colors={['#F8F6F0', '#F2EFE8']} className="flex-1">
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, paddingBottom: 110 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#34d399" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#607C64" />}
           className="px-6 py-4"
           showsVerticalScrollIndicator={false}
         >
           {/* Header */}
-          <View className="flex-row justify-between items-center mb-10 mt-3">
+          <View className="flex-row justify-between items-center mb-8 mt-3">
             <View>
-              <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-widest font-mono">{getGreeting()}</Text>
-              <Text className="text-white text-3xl font-serif font-black mt-0.5">{profile?.first_name || 'Yogi'}</Text>
+              <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono">{getGreeting()}</Text>
+              <Text className="text-[#2E3A2F] text-3xl font-serif font-black mt-0.5">{profile?.first_name || 'Yogi'}</Text>
             </View>
             <View className="flex-row items-center gap-3">
               {totalPending > 0 && (
@@ -231,36 +321,103 @@ export default function DashboardScreen() {
               )}
               <ConnectionStatusIndicator />
               <TouchableOpacity 
-                onPress={() => setShowProfileModal(true)} 
-                className="bg-[#111d19] border border-[#1f372f] p-2.5 rounded-xl active:bg-emerald-900/10"
+                onPress={() => setLocale(locale === 'en' ? 'sa' : 'en')} 
+                className="bg-white border border-[#E4E1D8] px-3 py-2.5 rounded-xl active:bg-emerald-950/5"
               >
-                <Ionicons name="cog-outline" size={18} color="#34d399" />
+                <Text className="text-[#607C64] text-[10px] font-bold font-mono uppercase tracking-wider">
+                  {locale === 'en' ? 'En' : 'Sa'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setShowProfileModal(true)} 
+                className="bg-white border border-[#E4E1D8] p-2.5 rounded-xl active:bg-emerald-950/5"
+              >
+                <Ionicons name="cog-outline" size={18} color="#607C64" />
               </TouchableOpacity>
             </View>
           </View>
 
+          {/* Experience Switch Segmented Control */}
+          <ExperienceSwitch />
+
+          {/* Welcome Onboarding Card */}
+          {!welcomeDismissed && (
+            <View className="bg-white border border-[#E4E1D8] p-5.5 rounded-3xl mb-8 relative overflow-hidden mt-6 shadow-sm shadow-[#E4E1D8]/40">
+              <View className="absolute right-0 top-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
+              <TouchableOpacity 
+                onPress={() => setWelcomeDismissed(true)}
+                className="absolute right-3.5 top-3.5 w-6 h-6 rounded-full bg-[#F2EFE8] border border-[#E4E1D8] items-center justify-center active:bg-emerald-950/5"
+                style={{ zIndex: 10 }}
+              >
+                <Ionicons name="close" size={12} color="#607C64" />
+              </TouchableOpacity>
+
+              <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono">Welcome to AquaAyur 🌿</Text>
+              <Text className="text-[#2E3A2F] text-base font-serif font-black mt-2 mb-2">You don't need to know Ayurveda.</Text>
+              <Text className="text-slate-550 text-[11px] leading-relaxed mb-4">
+                We'll help you understand your body one day at a time. Every recommendation is based on:
+              </Text>
+              
+              <View className="space-y-2 mb-5">
+                <View className="flex-row items-center mt-1">
+                  <Ionicons name="watch-outline" size={13} color="#607C64" style={{ marginRight: 8 }} />
+                  <Text className="text-slate-600 text-xs font-sans">Your paired sensor wearable band</Text>
+                </View>
+                <View className="flex-row items-center mt-1">
+                  <Ionicons name="checkbox-outline" size={13} color="#607C64" style={{ marginRight: 8 }} />
+                  <Text className="text-slate-600 text-xs font-sans">Your daily logged habits</Text>
+                </View>
+                <View className="flex-row items-center mt-1">
+                  <Ionicons name="sunny-outline" size={13} color="#607C64" style={{ marginRight: 8 }} />
+                  <Text className="text-slate-600 text-xs font-sans">Your lifestyle and circadian path</Text>
+                </View>
+                <View className="flex-row items-center mt-1">
+                  <Ionicons name="leaf-outline" size={13} color="#607C64" style={{ marginRight: 8 }} />
+                  <Text className="text-slate-600 text-xs font-sans">Ayurvedic wellness principles</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                onPress={() => setWelcomeDismissed(true)}
+                className="bg-[#7D9C83] py-3.5 rounded-2xl items-center active:bg-[#607C64] shadow shadow-emerald-500/10"
+              >
+                <Text className="text-white font-black text-xs uppercase tracking-wider">Let's begin your first Wellness Brief</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Ayurvedic Twin Avatar Core */}
-          <View className="items-center justify-center mb-8">
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/digital-twin')}
+            activeOpacity={0.9}
+            className="items-center justify-center mb-8"
+          >
             <AyurvedicTwinAvatar />
-          </View>
+          </TouchableOpacity>
 
           {/* Live Telemetry Stream Card */}
           <TouchableOpacity
             onPress={() => router.push('/(tabs)/live-monitor')}
-            className="bg-[#111d19]/45 border border-[#1f372f] p-5 rounded-3xl mb-8 active:bg-emerald-900/10"
+            className="bg-white border border-[#E4E1D8] p-5 rounded-3xl mb-8 active:bg-emerald-955/5 shadow-sm shadow-[#E4E1D8]/40"
           >
             <View className="flex-row justify-between items-center mb-4">
               <View className="flex-row items-center">
-                <Ionicons name="pulse" size={16} color="#34d399" />
-                <Text className="text-white text-xs font-serif font-black ml-2">Live Biometric Feed</Text>
+                <Ionicons name="pulse" size={16} color="#607C64" />
+                <Text className="text-[#2E3A2F] text-xs font-serif font-black ml-2">Live Biometric Feed</Text>
               </View>
-              <View className="flex-row items-center bg-[#172722]/85 border border-[#1f372f]/50 px-2.5 py-0.5 rounded-full">
+              <View className="flex-row items-center bg-[#F2EFE8] border border-[#E4E1D8] px-2.5 py-0.5 rounded-full">
                 <View 
-                  className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                    sensorStatus === 'connected' ? 'bg-emerald-400 shadow shadow-emerald-400' : 'bg-rose-500'
-                  }`} 
+                  className="w-1.5 h-1.5 rounded-full mr-1.5"
+                  style={{
+                    backgroundColor: sensorStatus === 'connected' ? '#10b981' : '#ef4444',
+                    shadowColor: sensorStatus === 'connected' ? '#10b981' : undefined,
+                    shadowOffset: sensorStatus === 'connected' ? { width: 0, height: 0 } : undefined,
+                    shadowOpacity: sensorStatus === 'connected' ? 0.6 : undefined,
+                    shadowRadius: sensorStatus === 'connected' ? 4 : undefined,
+                    elevation: sensorStatus === 'connected' ? 2 : undefined
+                  }}
                 />
-                <Text className="text-white text-[8px] font-bold uppercase font-mono tracking-widest">
+                <Text className="text-[#2E3A2F] text-[8px] font-bold uppercase font-mono tracking-widest">
                   {sensorStatus === 'connected' ? 'Live Stream' : 'Offline'}
                 </Text>
               </View>
@@ -271,109 +428,174 @@ export default function DashboardScreen() {
                 <View className="items-center flex-1">
                   <View className="flex-row items-center">
                     <Ionicons name="heart" size={12} color="#ef4444" style={{ marginRight: 4 }} />
-                    <Text className="text-slate-350 text-[9px] font-mono uppercase tracking-wider">Heart Rate</Text>
+                    <Text className="text-slate-500 text-[9px] font-mono uppercase tracking-wider">Heart State</Text>
                   </View>
-                  <Text className="text-white text-base font-bold font-mono mt-1">
-                    {liveData?.heartRate || 72} <Text className="text-[9px] font-sans text-slate-400">bpm</Text>
+                  <Text className="text-[#2E3A2F] text-xs font-bold mt-1 text-center">
+                    {mode === 'wellness' 
+                      ? getHeartRateTranslation(liveData?.heartRate || 72)
+                      : `${liveData?.heartRate || 72} bpm`}
                   </Text>
                 </View>
 
-                <View className="w-[1px] h-8 bg-[#1f372f]" />
+                <View className="w-[1px] h-8 bg-[#E4E1D8]" />
 
                 <View className="items-center flex-1">
                   <View className="flex-row items-center">
                     <Ionicons name="thermometer" size={12} color="#38bdf8" style={{ marginRight: 4 }} />
-                    <Text className="text-slate-350 text-[9px] font-mono uppercase tracking-wider">Skin Temp</Text>
+                    <Text className="text-slate-500 text-[9px] font-mono uppercase tracking-wider">Skin Temp</Text>
                   </View>
-                  <Text className="text-white text-base font-bold font-mono mt-1">
-                    {liveData?.temperature ? liveData.temperature.toFixed(1) : '36.5'} <Text className="text-[9px] font-sans text-slate-400">°C</Text>
+                  <Text className="text-[#2E3A2F] text-xs font-bold mt-1 text-center">
+                    {mode === 'wellness'
+                      ? getTempTranslation(liveData?.temperature || 36.5)
+                      : `${liveData?.temperature ? liveData.temperature.toFixed(1) : '36.5'} °C`}
                   </Text>
                 </View>
 
-                <View className="w-[1px] h-8 bg-[#1f372f]" />
+                <View className="w-[1px] h-8 bg-[#E4E1D8]" />
 
                 <View className="items-center flex-1">
                   <View className="flex-row items-center">
                     <Ionicons name="footsteps" size={12} color="#fbbf24" style={{ marginRight: 4 }} />
-                    <Text className="text-slate-350 text-[9px] font-mono uppercase tracking-wider">Steps</Text>
+                    <Text className="text-slate-500 text-[9px] font-mono uppercase tracking-wider">Movement</Text>
                   </View>
-                  <Text className="text-white text-base font-bold font-mono mt-1">
-                    {liveData?.steps || 0} <Text className="text-[9px] font-sans text-slate-400">steps</Text>
+                  <Text className="text-[#2E3A2F] text-xs font-bold mt-1 text-center">
+                    {mode === 'wellness'
+                      ? getStepsTranslation(liveData?.steps || 0)
+                      : `${liveData?.steps || 0} steps`}
                   </Text>
                 </View>
               </View>
             ) : (
               <View className="flex-row justify-between items-center py-1">
-                <Text className="text-slate-300 text-xs flex-1 mr-3 leading-relaxed">
+                <Text className="text-slate-500 text-xs flex-1 mr-3 leading-relaxed">
                   No active wearable hardware paired. Tap here to pair your sensor band.
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color="#34d399" />
+                <Ionicons name="chevron-forward" size={16} color="#607C64" />
               </View>
             )}
           </TouchableOpacity>
 
-          {/* Narrative Story block (How am I today?) */}
-          <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl mb-8">
-            <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest mb-2 font-mono">Today's State</Text>
-            <Text className="text-white text-xl font-serif font-bold leading-snug mb-3">
-              {narrative.wellnessStatement}
-            </Text>
-            <Text className="text-slate-300 text-xs leading-relaxed">
-              Your metabolic fire (Agni) is currently registered at {todayAgni?.agni_score || 75}% ({todayAgni?.agni_state || 'Balanced'}), while your immune cellular shield (Ojas) index holds at {todayOjas?.ojas_score || 78}%. Overall physiological recovery is calculated at {narrative.recovery}%.
-            </Text>
+          {/* Narrative Insight block */}
+          {mode === 'wellness' ? (
+            <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl mb-8 shadow-sm shadow-[#E4E1D8]/40">
+              <View className="flex-row justify-between items-center mb-4 border-b border-[#E4E1D8]/45 pb-3">
+                <View>
+                  <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono">Daily Story</Text>
+                  <Text className="text-slate-450 text-[7.5px] font-mono mt-0.5">PREDICTION CONFIDENCE: {getDailyStory().confidence}%</Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => setSelectedConcept((narrative.primaryImbalance as ConceptId) || 'pitta')}
+                  className="bg-[#F2EFE8] border border-[#E4E1D8] px-2.5 py-1 rounded-xl"
+                >
+                  <Text className="text-[#607C64] text-[8px] font-bold uppercase font-mono">Learn Why</Text>
+                </TouchableOpacity>
+              </View>
 
-            <View className="border-t border-[#1f372f] pt-4 mt-4 flex-row justify-around">
-              <View className="items-center">
-                <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-wide">Agni</Text>
-                <Text className="text-white text-sm font-bold font-mono mt-0.5">{todayAgni?.agni_score || 75}%</Text>
+              <Text className="text-[#2E3A2F] text-base font-serif font-black leading-snug mb-3">
+                {getDailyStory().greeting}
+              </Text>
+              
+              <Text className="text-slate-600 text-xs font-serif leading-relaxed mb-4">
+                {getDailyStory().currentCondition} {getDailyStory().reason} {getDailyStory().prediction}
+              </Text>
+
+              {/* Today's Focus List */}
+              <View className="bg-[#F5F2EA]/60 border border-[#E4E1D8] p-4.5 rounded-2xl mb-4">
+                <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono mb-2">Today's Focus Tasks</Text>
+                {getDailyStory().recommendations.map((rec, idx) => (
+                  <View key={idx} className="flex-row items-center mt-1">
+                    <Ionicons name="sparkles" size={10} color="#607C64" style={{ marginRight: 6 }} />
+                    <Text className="text-slate-600 text-xs font-sans">{rec}</Text>
+                  </View>
+                ))}
               </View>
-              <View className="w-[1px] bg-[#1f372f]" />
-              <View className="items-center">
-                <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-wide">Ojas</Text>
-                <Text className="text-white text-sm font-bold font-mono mt-0.5">{todayOjas?.ojas_score || 78}%</Text>
-              </View>
-              <View className="w-[1px] bg-[#1f372f]" />
-              <View className="items-center">
-                <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-wide">Equilibrium</Text>
-                <Text className="text-white text-sm font-bold font-mono mt-0.5">{narrative.recovery}%</Text>
+
+              {/* Expected Outcome */}
+              <View className="border-t border-[#E4E1D8]/45 pt-3">
+                <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider font-mono">Expected Outcome</Text>
+                <Text className="text-slate-600 text-xs mt-1 leading-relaxed">
+                  {getDailyStory().expectedOutcome}
+                </Text>
               </View>
             </View>
-          </View>
+          ) : (
+            <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl mb-8 shadow-sm shadow-[#E4E1D8]/40">
+              <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest mb-2 font-mono">Today's State</Text>
+              <Text className="text-[#2E3A2F] text-xl font-serif font-bold leading-snug mb-3">
+                {narrative.wellnessStatement}
+              </Text>
+              <Text className="text-slate-600 text-xs leading-relaxed">
+                Your metabolic fire (Agni) is currently registered at {todayAgni?.agni_score || 75}% ({todayAgni?.agni_state || 'Balanced'}), while your immune cellular shield (Ojas) index holds at {todayOjas?.ojas_score || 78}%. Overall physiological recovery is calculated at {narrative.recovery}%.
+              </Text>
+
+              <View className="border-t border-[#E4E1D8] pt-4 mt-4 flex-row justify-around">
+                <TouchableOpacity onPress={() => setSelectedConcept('agni')} className="items-center">
+                  <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wide">Agni</Text>
+                  <Text className="text-[#2E3A2F] text-sm font-bold font-mono mt-0.5">{todayAgni?.agni_score || 75}%</Text>
+                  <Text className="text-[#607C64]/70 text-[7.5px] font-bold mt-0.5 font-mono uppercase tracking-wider">Learn Why</Text>
+                </TouchableOpacity>
+                <View className="w-[1px] bg-[#E4E1D8]" />
+                <TouchableOpacity onPress={() => setSelectedConcept('ojas')} className="items-center">
+                  <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wide">Ojas</Text>
+                  <Text className="text-[#2E3A2F] text-sm font-bold font-mono mt-0.5">{todayOjas?.ojas_score || 78}%</Text>
+                  <Text className="text-[#607C64]/70 text-[7.5px] font-bold mt-0.5 font-mono uppercase tracking-wider">Learn Why</Text>
+                </TouchableOpacity>
+                <View className="w-[1px] bg-[#E4E1D8]" />
+                <TouchableOpacity onPress={() => setSelectedConcept((narrative.primaryImbalance as ConceptId) || 'pitta')} className="items-center">
+                  <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wide">Imbalance</Text>
+                  <Text className="text-[#2E3A2F] text-sm font-bold font-mono mt-0.5">{(narrative.primaryImbalance || 'Pitta').toUpperCase()}</Text>
+                  <Text className="text-[#607C64]/70 text-[7.5px] font-bold mt-0.5 font-mono uppercase tracking-wider">Learn Why</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Tomorrow's Forecast Prediction (Evidence View only - represented inside Wellness Insight for Wellness view) */}
+          {mode === 'evidence' && (
+            <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl mb-8 shadow-sm shadow-[#E4E1D8]/40">
+              <Text className="text-[#607C64] text-[10px] font-bold uppercase tracking-wider mb-2 font-mono">Tomorrow's Forecast</Text>
+              <Text className="text-[#2E3A2F] text-sm font-serif font-bold mb-2">Predicted Outcome</Text>
+              <Text className="text-slate-600 text-xs leading-relaxed">
+                {narrative.predictedOutcome}
+              </Text>
+            </View>
+          )}
 
           {/* Upcoming Health Mission */}
-          <View className="bg-[#111d19]/45 border border-[#1f372f] p-5 rounded-3xl mb-8 flex-row items-center">
-            <View className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 items-center justify-center mr-4">
-              <Ionicons name="sparkles" size={18} color="#10b981" />
+          <View className="bg-white border border-[#E4E1D8] p-5 rounded-3xl mb-8 flex-row items-center shadow-sm shadow-[#E4E1D8]/40">
+            <View className="w-10 h-10 rounded-full bg-[#F5F2EA] border border-[#E4E1D8] items-center justify-center mr-4">
+              <Ionicons name="sparkles" size={18} color="#607C64" />
             </View>
             <View className="flex-1">
-              <Text className="text-emerald-400 text-[9px] uppercase font-bold tracking-widest font-mono">Current Focus</Text>
-              <Text className="text-white text-sm font-serif font-bold mt-0.5">Hydration & Circadian Lock</Text>
-              <Text className="text-slate-300 text-xs mt-1 leading-relaxed">
+              <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-widest font-mono">Current Focus</Text>
+              <Text className="text-[#2E3A2F] text-sm font-serif font-bold mt-0.5">Hydration & Circadian Lock</Text>
+              <Text className="text-slate-600 text-xs mt-1 leading-relaxed">
                 {narrative.routineFocus}
               </Text>
             </View>
           </View>
+
           {/* Today's Plan (Checklist recommendations) */}
-          <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl mb-8">
+          <View className="bg-white border border-[#E4E1D8] p-6 rounded-3xl mb-8 shadow-sm shadow-[#E4E1D8]/40">
             <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider font-mono">Today's Plan</Text>
-              <Text className="text-[#34d399]/60 text-[9px] font-mono">Remaining Tasks</Text>
+              <Text className="text-[#607C64] text-[10px] font-bold uppercase tracking-wider font-mono">Today's Plan</Text>
+              <Text className="text-slate-400 text-[9px] font-mono">Remaining Tasks</Text>
             </View>
             
             <View className="space-y-3.5">
               {visibleTasks.length === 0 ? (
                 <View className="py-4 items-center justify-center">
-                  <Ionicons name="checkmark-done-circle-outline" size={32} color="#10b981" />
-                  <Text className="text-emerald-400 text-xs font-serif font-black mt-2 text-center">
+                  <Ionicons name="checkmark-done-circle-outline" size={32} color="#607C64" />
+                  <Text className="text-[#607C64] text-xs font-serif font-black mt-2 text-center">
                     All remaining Dinacharya tasks are completed!
                   </Text>
-                  <Text className="text-slate-350 text-[10px] text-center mt-1">
+                  <Text className="text-slate-500 text-[10px] text-center mt-1">
                     Rest and conserve your Ojas.
                   </Text>
                 </View>
               ) : (
                 visibleTasks.map((task) => (
-                  <View key={task.key} className="flex-row items-center bg-[#172722]/40 p-4 rounded-2xl border border-[#1f372f] justify-between">
+                  <View key={task.key} className="flex-row items-center bg-[#F5F2EA]/40 p-4 rounded-2xl border border-[#E4E1D8] justify-between">
                     <TouchableOpacity
                       onPress={() => user?.id && toggleTaskCompletion(user.id, task.key)}
                       className="flex-row items-center flex-1 mr-3"
@@ -381,22 +603,22 @@ export default function DashboardScreen() {
                       <Ionicons 
                         name={task.completed ? 'checkmark-circle' : 'ellipse-outline'} 
                         size={22} 
-                        color={task.completed ? '#10b981' : '#1f372f'} 
+                        color={task.completed ? '#607C64' : '#E4E1D8'} 
                       />
                       <View className="ml-3 flex-1">
-                        <Text className={`text-white text-xs font-bold ${task.completed ? 'line-through text-emerald-500/40' : ''}`}>
+                        <Text className={`text-[#2E3A2F] text-xs font-bold ${task.completed ? 'line-through text-slate-400' : ''}`}>
                           {task.title}
                         </Text>
-                        <Text className="text-[#34d399]/85 text-[10px] mt-0.5">
+                        <Text className="text-slate-500 text-[10px] mt-0.5">
                           {task.subtitle}
                         </Text>
                       </View>
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => handleOpenExplanation(task.why)}
-                      className="bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1.5 rounded-lg active:bg-emerald-500/20"
+                      className="bg-[#F2EFE8] border border-[#E4E1D8] px-2.5 py-1.5 rounded-lg active:bg-emerald-950/5"
                     >
-                      <Text className="text-emerald-400 font-bold text-[8px] tracking-wider uppercase">WHY?</Text>
+                      <Text className="text-[#607C64] font-bold text-[8px] tracking-wider uppercase">WHY?</Text>
                     </TouchableOpacity>
                   </View>
                 ))
@@ -404,31 +626,22 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* Tomorrow's Forecast Prediction */}
-          <View className="bg-[#111d19]/45 border border-[#1f372f] p-6 rounded-3xl mb-8">
-            <Text className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-2 font-mono">Tomorrow's Forecast</Text>
-            <Text className="text-white text-sm font-serif font-bold mb-2">Predicted Outcome</Text>
-            <Text className="text-slate-300 text-xs leading-relaxed">
-              {narrative.predictedOutcome}
-            </Text>
-          </View>
-
           {/* Quick Action Buttons */}
           <View className="flex-row space-x-3 mb-6">
             <TouchableOpacity
               onPress={logHydrationQuick}
-              className="flex-1 bg-emerald-500 rounded-xl py-3.5 flex-row justify-center items-center shadow active:bg-emerald-600"
+              className="flex-1 bg-[#7D9C83] rounded-xl py-3.5 flex-row justify-center items-center shadow active:bg-[#607C64]"
             >
-              <Ionicons name="water" size={14} color="#091310" style={{ marginRight: 6 }} />
-              <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">Log +250ml</Text>
+              <Ionicons name="water" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text className="text-white font-black text-xs uppercase tracking-wider">Log +250ml</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => router.push('/(tabs)/coach')}
-              className="flex-1 bg-[#111d19] border border-[#1f372f] rounded-xl py-3.5 flex-row justify-center items-center active:bg-emerald-900/15"
+              className="flex-1 bg-white border border-[#E4E1D8] rounded-xl py-3.5 flex-row justify-center items-center active:bg-emerald-955/5"
             >
-              <Ionicons name="chatbubble-ellipses" size={14} color="#34d399" style={{ marginRight: 6 }} />
-              <Text className="text-emerald-400 font-bold text-xs uppercase tracking-wider">Consult Physician</Text>
+              <Ionicons name="chatbubble-ellipses" size={14} color="#607C64" style={{ marginRight: 6 }} />
+              <Text className="text-[#607C64] font-bold text-xs uppercase tracking-wider">Consult Physician</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -440,15 +653,15 @@ export default function DashboardScreen() {
           animationType="slide"
           onRequestClose={() => setShowProfileModal(false)}
         >
-          <View className="flex-1 bg-[#091310]/95 justify-end">
-            <View className="bg-[#111d19] border-t border-[#1f372f] p-6 rounded-t-3xl min-h-[50%]">
+          <View className="flex-1 bg-black/40 justify-end">
+            <View className="bg-[#F8F6F0] border-t border-[#E4E1D8] p-6 rounded-t-3xl min-h-[50%]">
               <View className="flex-row justify-between items-center mb-6">
-                <Text className="text-white text-lg font-serif font-black">Sanctuary Settings</Text>
+                <Text className="text-[#2E3A2F] text-lg font-serif font-black">Sanctuary Settings</Text>
                 <TouchableOpacity
                   onPress={() => setShowProfileModal(false)}
-                  className="p-1.5 rounded-full bg-[#172722] border border-[#1f372f]"
+                  className="p-1.5 rounded-full bg-[#F2EFE8] border border-[#E4E1D8]"
                 >
-                  <Ionicons name="close" size={18} color="#34d399" />
+                  <Ionicons name="close" size={18} color="#607C64" />
                 </TouchableOpacity>
               </View>
 
@@ -457,15 +670,15 @@ export default function DashboardScreen() {
                   setShowProfileModal(false);
                   router.push('/(tabs)/profile');
                 }}
-                className="bg-[#172722]/50 border border-[#1f372f] p-4 rounded-2xl mb-4 active:bg-[#172722]/80"
+                className="bg-white border border-[#E4E1D8] p-4 rounded-2xl mb-4 active:bg-emerald-955/5 shadow-sm"
               >
-                <Text className="text-emerald-400 text-[10px] uppercase font-bold mb-2 font-mono">Active Profile</Text>
-                <Text className="text-white text-base font-bold">{profile?.full_name || 'Yogi'}</Text>
-                <Text className="text-slate-300 text-xs mt-1">
-                  Dominant Dosha: <Text className="text-emerald-400 capitalize">{profile?.dominant_dosha?.replace('_', ' ') || 'Calculating...'}</Text>
+                <Text className="text-[#607C64] text-[10px] uppercase font-bold mb-2 font-mono">Active Profile</Text>
+                <Text className="text-[#2E3A2F] text-base font-bold">{profile?.full_name || 'Yogi'}</Text>
+                <Text className="text-slate-500 text-xs mt-1">
+                  Dominant Dosha: <Text className="text-[#607C64] capitalize">{profile?.dominant_dosha?.replace('_', ' ') || 'Calculating...'}</Text>
                 </Text>
-                <Text className="text-slate-300 text-xs mt-1">
-                  Water Allocation: <Text className="text-emerald-400">{profile?.daily_water_goal_ml || 2500} ml</Text>
+                <Text className="text-slate-500 text-xs mt-1">
+                  Water Allocation: <Text className="text-[#607C64]">{profile?.daily_water_goal_ml || 2500} ml</Text>
                 </Text>
               </TouchableOpacity>
 
@@ -475,13 +688,13 @@ export default function DashboardScreen() {
                     setShowProfileModal(false);
                     router.push('/(tabs)/profile');
                   }}
-                  className="bg-[#172722]/30 border border-[#1f372f] p-4 rounded-xl flex-row items-center justify-between active:bg-emerald-900/10"
+                  className="bg-white border border-[#E4E1D8] p-4 rounded-xl flex-row items-center justify-between active:bg-emerald-955/5 shadow-sm"
                 >
                   <View className="flex-row items-center">
-                    <Ionicons name="person-outline" size={18} color="#34d399" />
-                    <Text className="text-white text-xs font-bold ml-3">Wellness Profile</Text>
+                    <Ionicons name="person-outline" size={18} color="#607C64" />
+                    <Text className="text-[#2E3A2F] text-xs font-bold ml-3">Wellness Profile</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={14} color="#6b7280" />
+                  <Ionicons name="chevron-forward" size={14} color="#8C958E" />
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -489,13 +702,13 @@ export default function DashboardScreen() {
                     setShowProfileModal(false);
                     router.push('/(tabs)/device');
                   }}
-                  className="bg-[#172722]/30 border border-[#1f372f] p-4 rounded-xl flex-row items-center justify-between active:bg-emerald-900/10"
+                  className="bg-white border border-[#E4E1D8] p-4 rounded-xl flex-row items-center justify-between active:bg-emerald-955/5 shadow-sm"
                 >
                   <View className="flex-row items-center">
-                    <Ionicons name="bluetooth" size={18} color="#34d399" />
-                    <Text className="text-white text-xs font-bold ml-3">Wearable Devices</Text>
+                    <Ionicons name="bluetooth" size={18} color="#607C64" />
+                    <Text className="text-[#2E3A2F] text-xs font-bold ml-3">Wearable Devices</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={14} color="#6b7280" />
+                  <Ionicons name="chevron-forward" size={14} color="#8C958E" />
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -503,13 +716,13 @@ export default function DashboardScreen() {
                     setShowProfileModal(false);
                     router.push('/(tabs)/settings');
                   }}
-                  className="bg-[#172722]/30 border border-[#1f372f] p-4 rounded-xl flex-row items-center justify-between active:bg-emerald-900/10"
+                  className="bg-white border border-[#E4E1D8] p-4 rounded-xl flex-row items-center justify-between active:bg-emerald-955/5 shadow-sm"
                 >
                   <View className="flex-row items-center">
-                    <Ionicons name="settings-outline" size={18} color="#34d399" />
-                    <Text className="text-white text-xs font-bold ml-3">System Settings</Text>
+                    <Ionicons name="settings-outline" size={18} color="#607C64" />
+                    <Text className="text-[#2E3A2F] text-xs font-bold ml-3">System Settings</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={14} color="#6b7280" />
+                  <Ionicons name="chevron-forward" size={14} color="#8C958E" />
                 </TouchableOpacity>
               </View>
 
@@ -531,6 +744,12 @@ export default function DashboardScreen() {
           onClose={() => setExplanationVisible(false)}
           context={explanationContext}
         />
+
+        <AyurConceptExplanationSheet
+          visible={!!selectedConcept}
+          onClose={() => setSelectedConcept(null)}
+          conceptId={selectedConcept}
+        />
       </LinearGradient>
     </SafeAreaView>
   );
@@ -550,12 +769,20 @@ const ConnectionStatusIndicator = React.memo(function ConnectionStatusIndicator(
   }, [sensorStatus]);
 
   return (
-    <View className="bg-[#111d19]/60 border border-[#1f372f] px-3 py-1.5 rounded-full flex-row items-center">
+    <View className="bg-[#F2EFE8] border border-[#E4E1D8] px-3 py-1.5 rounded-full flex-row items-center">
       <View 
-        style={{ opacity: sensorStatus === 'connected' ? pulseGlow : 1 }} 
-        className={`w-1.5 h-1.5 rounded-full mr-1.5 ${sensorStatus === 'connected' ? 'bg-emerald-400 shadow shadow-emerald-400' : 'bg-rose-500'}`} 
+        style={{ 
+          opacity: sensorStatus === 'connected' ? pulseGlow : 1,
+          backgroundColor: sensorStatus === 'connected' ? '#607C64' : '#ef4444',
+          shadowColor: sensorStatus === 'connected' ? '#607C64' : undefined,
+          shadowOffset: sensorStatus === 'connected' ? { width: 0, height: 0 } : undefined,
+          shadowOpacity: sensorStatus === 'connected' ? 0.6 : undefined,
+          shadowRadius: sensorStatus === 'connected' ? 4 : undefined,
+          elevation: sensorStatus === 'connected' ? 2 : undefined
+        }} 
+        className="w-1.5 h-1.5 rounded-full mr-1.5" 
       />
-      <Text className="text-white text-[9px] font-bold uppercase font-mono tracking-widest">
+      <Text className="text-[#607C64] text-[9px] font-bold uppercase font-mono tracking-widest">
         {sensorStatus === 'connected' ? 'Linked' : 'Offline'}
       </Text>
     </View>
@@ -673,7 +900,7 @@ const AyurvedicTwinAvatar = React.memo(function AyurvedicTwinAvatar() {
 
   return (
     <View className="items-center justify-center py-2 relative">
-      <View className="w-56 h-56 rounded-full border border-[#1f372f] bg-[#111d19]/45 items-center justify-center shadow-xl shadow-emerald-950/20 relative overflow-hidden">
+      <View className="w-56 h-56 rounded-full border border-[#E4E1D8] bg-white items-center justify-center shadow-sm relative overflow-hidden">
         
         {/* Outer glowing breathe ring */}
         <Animated.View 
@@ -682,7 +909,7 @@ const AyurvedicTwinAvatar = React.memo(function AyurvedicTwinAvatar() {
             height: 175,
             borderRadius: 9999,
             borderWidth: 1.5,
-            borderColor: 'rgba(52, 211, 153, 0.35)',
+            borderColor: 'rgba(96, 124, 100, 0.25)', // Sage green alpha
             position: 'absolute',
             transform: [{ scale: ojasBreathe }],
             opacity: 0.4 + (ojas / 100) * 0.5,
@@ -694,30 +921,31 @@ const AyurvedicTwinAvatar = React.memo(function AyurvedicTwinAvatar() {
           <Defs>
             <RadialGradient id="agniFire" cx="50%" cy="50%" rx="50%" ry="50%">
               <Stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-              <Stop offset="40%" stopColor="#fbbf24" stopOpacity="0.95" />
-              <Stop offset="80%" stopColor="#f97316" stopOpacity="0.4" />
-              <Stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+              <Stop offset="40%" stopColor="#D48C7B" stopOpacity="0.95" />
+              <Stop offset="80%" stopColor="#C07A65" stopOpacity="0.4" />
+              <Stop offset="100%" stopColor="#C07A65" stopOpacity="0" />
             </RadialGradient>
             <RadialGradient id="mandalaShine" cx="50%" cy="50%" rx="50%" ry="50%">
-              <Stop offset="0%" stopColor="rgba(52, 211, 153, 0.09)" stopOpacity="0.8" />
-              <Stop offset="100%" stopColor="rgba(5, 31, 24, 0.6)" stopOpacity="0.15" />
+              <Stop offset="0%" stopColor="rgba(96, 124, 100, 0.15)" stopOpacity="0.8" />
+              <Stop offset="100%" stopColor="rgba(255, 255, 255, 0.8)" stopOpacity="0.15" />
             </RadialGradient>
           </Defs>
 
-          <Line x1="150" y1="150" x2="150" y2="30" stroke="rgba(16, 185, 129, 0.12)" strokeWidth="1" strokeDasharray="3,3" />
-          <Line x1="150" y1="150" x2="253.9" y2="210" stroke="rgba(16, 185, 129, 0.12)" strokeWidth="1" strokeDasharray="3,3" />
-          <Line x1="150" y1="150" x2="46.1" y2="210" stroke="rgba(16, 185, 129, 0.12)" strokeWidth="1" strokeDasharray="3,3" />
+          <Line x1="150" y1="150" x2="150" y2="30" stroke="rgba(96, 124, 100, 0.15)" strokeWidth="1" strokeDasharray="3,3" />
+          <Line x1="150" y1="150" x2="253.9" y2="210" stroke="rgba(96, 124, 100, 0.15)" strokeWidth="1" strokeDasharray="3,3" />
+          <Line x1="150" y1="150" x2="46.1" y2="210" stroke="rgba(96, 124, 100, 0.15)" strokeWidth="1" strokeDasharray="3,3" />
           
           <Polygon
             points={polyPoints}
             fill="url(#mandalaShine)"
-            stroke="rgba(52, 211, 153, 0.7)"
+            stroke="#607C64" // Sage Green Accent
             strokeWidth="2"
           />
           
-          <Circle cx="150" cy="30" r="3.5" fill="rgba(167, 139, 250, 0.6)" />
-          <Circle cx="253.9" cy="210" r="3.5" fill="rgba(249, 115, 22, 0.6)" />
-          <Circle cx="46.1" cy="210" r="3.5" fill="rgba(20, 184, 166, 0.6)" />
+          {/* Nodes corresponding to Vata, Pitta, Kapha */}
+          <Circle cx="150" cy="30" r="4.5" fill="#5C788A" /> {/* Vata - Slate Blue */}
+          <Circle cx="253.9" cy="210" r="4.5" fill="#C07A65" /> {/* Pitta - Terracotta */}
+          <Circle cx="46.1" cy="210" r="4.5" fill="#607C64" /> {/* Kapha - Sage Green */}
 
           <AnimatedG transform={[{ scale: agniPulse }]} origin="150, 150">
             <Circle cx="150" cy="150" r="26" fill="url(#agniFire)" />

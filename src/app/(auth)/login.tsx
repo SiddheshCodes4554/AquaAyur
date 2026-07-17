@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useSignIn, useSignUp, useOAuth } from '@clerk/clerk-expo';
 import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,7 +12,7 @@ WebBrowser.maybeCompleteAuthSession();
 type AuthMode = 'welcome' | 'login' | 'signup' | 'verify_email' | 'forgot_password' | 'reset_password_code';
 
 export default function LoginScreen() {
-  const [mode, setMode] = useState<AuthMode>('welcome');
+  const [mode, setMode] = useState<AuthMode>('login'); // Default directly to login form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -28,11 +29,20 @@ export default function LoginScreen() {
   // Google OAuth
   const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
 
+  // WebBrowser warm-up and cool-down for stable Android OAuth redirect sessions
+  useEffect(() => {
+    void WebBrowser.warmUpAsync();
+    return () => {
+      void WebBrowser.coolDownAsync();
+    };
+  }, []);
+
   const handleOAuthLogin = async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const { createdSessionId, setActive } = await startOAuthFlow();
+      const redirectUrl = Linking.createURL('/(tabs)', { scheme: 'ayurveda' });
+      const { createdSessionId, setActive } = await startOAuthFlow({ redirectUrl });
       if (createdSessionId && setActive) {
         await setActive({ session: createdSessionId });
       }
@@ -43,6 +53,8 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
+
 
   const handleCredentialsAuth = async () => {
     setErrorMsg(null);
@@ -199,6 +211,8 @@ export default function LoginScreen() {
           <Ionicons name="logo-google" size={16} color="#10b981" style={{ marginRight: 8 }} />
           <Text className="text-white font-bold text-xs uppercase tracking-wider">Continue with Google</Text>
         </TouchableOpacity>
+
+
       </View>
     </View>
   );
@@ -231,10 +245,10 @@ export default function LoginScreen() {
                 <View className="bg-[#111d19]/45 border border-[#1f372f] p-7 rounded-3xl shadow-xl">
                   
                   {/* Branded Title */}
-                  <Text className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest mb-1.5 font-mono">
+                  <Text style={{ color: '#34d399' }} className="text-emerald-400 text-[10px] uppercase font-bold tracking-widest mb-1.5 font-mono">
                     AquaAyur Sanctuary
                   </Text>
-                  <Text className="text-white text-2xl font-serif font-black mb-6">
+                  <Text style={{ color: '#ffffff' }} className="text-white text-2xl font-serif font-black mb-6">
                     {mode === 'signup' 
                       ? 'Begin Consultation' 
                       : mode === 'verify_email'
@@ -248,26 +262,27 @@ export default function LoginScreen() {
 
                   {errorMsg && (
                     <View className="bg-red-950/40 border border-red-900/40 p-4 rounded-xl mb-6">
-                      <Text className="text-red-400 text-xs text-center font-sans font-medium">{errorMsg}</Text>
+                      <Text style={{ color: '#f87171' }} className="text-red-400 text-xs text-center font-sans font-medium">{errorMsg}</Text>
                     </View>
                   )}
 
                   {successMsg && (
                     <View className="bg-emerald-950/40 border border-emerald-900/40 p-4 rounded-xl mb-6">
-                      <Text className="text-emerald-400 text-xs text-center font-sans font-medium">{successMsg}</Text>
+                      <Text style={{ color: '#34d399' }} className="text-emerald-400 text-xs text-center font-sans font-medium">{successMsg}</Text>
                     </View>
                   )}
 
                   {/* Signup Details */}
                   {mode === 'signup' && (
                     <View className="mb-4">
-                      <Text className="text-emerald-300 text-xs font-semibold mb-2">Full Name</Text>
+                      <Text style={{ color: '#6ee7b7' }} className="text-emerald-300 text-xs font-semibold mb-2">Full Name</Text>
                       <TextInput
                         value={fullName}
                         onChangeText={setFullName}
                         placeholder="John Doe"
                         placeholderTextColor="#064e3b"
                         autoCapitalize="words"
+                        style={{ color: '#ffffff' }}
                         className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-12 text-white text-sm"
                       />
                     </View>
@@ -275,7 +290,7 @@ export default function LoginScreen() {
 
                   {mode !== 'verify_email' && mode !== 'reset_password_code' && (
                     <View className="mb-4">
-                      <Text className="text-emerald-300 text-xs font-semibold mb-2">Email Address</Text>
+                      <Text style={{ color: '#6ee7b7' }} className="text-emerald-300 text-xs font-semibold mb-2">Email Address</Text>
                       <TextInput
                         value={email}
                         onChangeText={setEmail}
@@ -283,6 +298,7 @@ export default function LoginScreen() {
                         placeholderTextColor="#064e3b"
                         keyboardType="email-address"
                         autoCapitalize="none"
+                        style={{ color: '#ffffff' }}
                         className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-12 text-white text-sm"
                       />
                     </View>
@@ -291,7 +307,7 @@ export default function LoginScreen() {
                   {/* Verification Email */}
                   {mode === 'verify_email' && (
                     <View className="mb-6">
-                      <Text className="text-emerald-300 text-xs font-semibold mb-2">Verification Code</Text>
+                      <Text style={{ color: '#6ee7b7' }} className="text-emerald-300 text-xs font-semibold mb-2">Verification Code</Text>
                       <TextInput
                         value={code}
                         onChangeText={setCode}
@@ -299,6 +315,7 @@ export default function LoginScreen() {
                         placeholderTextColor="#064e3b"
                         keyboardType="number-pad"
                         maxLength={6}
+                        style={{ color: '#ffffff' }}
                         className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-14 text-white text-center text-xl font-bold tracking-widest"
                       />
                     </View>
@@ -308,7 +325,7 @@ export default function LoginScreen() {
                   {mode === 'reset_password_code' && (
                     <>
                       <View className="mb-4">
-                        <Text className="text-emerald-300 text-xs font-semibold mb-2">Reset Code</Text>
+                        <Text style={{ color: '#6ee7b7' }} className="text-emerald-300 text-xs font-semibold mb-2">Reset Code</Text>
                         <TextInput
                           value={code}
                           onChangeText={setCode}
@@ -316,11 +333,12 @@ export default function LoginScreen() {
                           placeholderTextColor="#064e3b"
                           keyboardType="number-pad"
                           maxLength={6}
+                          style={{ color: '#ffffff' }}
                           className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-12 text-white text-center text-sm font-bold tracking-wider"
                         />
                       </View>
                       <View className="mb-6">
-                        <Text className="text-emerald-300 text-xs font-semibold mb-2">New Password</Text>
+                        <Text style={{ color: '#6ee7b7' }} className="text-emerald-300 text-xs font-semibold mb-2">New Password</Text>
                         <TextInput
                           value={newPassword}
                           onChangeText={setNewPassword}
@@ -328,6 +346,7 @@ export default function LoginScreen() {
                           placeholder="••••••••"
                           placeholderTextColor="#064e3b"
                           autoCapitalize="none"
+                          style={{ color: '#ffffff' }}
                           className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-12 text-white text-sm"
                         />
                       </View>
@@ -336,7 +355,7 @@ export default function LoginScreen() {
 
                   {mode !== 'forgot_password' && mode !== 'verify_email' && mode !== 'reset_password_code' && (
                     <View className="mb-6">
-                      <Text className="text-emerald-300 text-xs font-semibold mb-2">Password</Text>
+                      <Text style={{ color: '#6ee7b7' }} className="text-emerald-300 text-xs font-semibold mb-2">Password</Text>
                       <TextInput
                         value={password}
                         onChangeText={setPassword}
@@ -344,9 +363,24 @@ export default function LoginScreen() {
                         placeholder="••••••••"
                         placeholderTextColor="#064e3b"
                         autoCapitalize="none"
+                        style={{ color: '#ffffff' }}
                         className="bg-[#172722] border border-[#1f372f] rounded-xl px-4 h-12 text-white text-sm"
                       />
                     </View>
+                  )}
+
+                  {/* Google OAuth Login Button */}
+                  {mode === 'login' && (
+                    <TouchableOpacity
+                      onPress={handleOAuthLogin}
+                      disabled={loading}
+                      className="bg-[#111d19] border border-[#1f372f] rounded-xl py-4 flex-row justify-center items-center active:bg-emerald-900/10 mb-4"
+                    >
+                      <Ionicons name="logo-google" size={16} color="#10b981" style={{ marginRight: 8 }} />
+                      <Text style={{ color: '#ffffff' }} className="text-white font-bold text-xs uppercase tracking-wider">
+                        Continue with Google
+                      </Text>
+                    </TouchableOpacity>
                   )}
 
                   {/* Standard Form Actions */}
@@ -358,7 +392,7 @@ export default function LoginScreen() {
                     {loading ? (
                       <ActivityIndicator color="#091310" />
                     ) : (
-                      <Text className="text-emerald-950 font-black text-xs uppercase tracking-wider">
+                      <Text style={{ color: '#022c22' }} className="text-emerald-950 font-black text-xs uppercase tracking-wider">
                         {mode === 'signup' 
                           ? 'Register Profile' 
                           : mode === 'verify_email'
@@ -384,7 +418,7 @@ export default function LoginScreen() {
                           }}
                           className="py-1"
                         >
-                          <Text className="text-emerald-400 text-center text-xs font-semibold">
+                          <Text style={{ color: '#34d399' }} className="text-emerald-400 text-center text-xs font-semibold">
                             Create a new account
                           </Text>
                         </TouchableOpacity>
@@ -397,7 +431,7 @@ export default function LoginScreen() {
                           }}
                           className="py-1"
                         >
-                          <Text className="text-emerald-500/60 text-center text-[10px] font-medium">
+                          <Text style={{ color: '#10b981', opacity: 0.6 }} className="text-emerald-500/60 text-center text-[10px] font-medium">
                             Forgot your password?
                           </Text>
                         </TouchableOpacity>
@@ -411,7 +445,7 @@ export default function LoginScreen() {
                         }}
                         className="py-1"
                       >
-                        <Text className="text-emerald-400 text-center text-xs font-semibold">
+                        <Text style={{ color: '#34d399' }} className="text-emerald-400 text-center text-xs font-semibold">
                           Back to Login
                         </Text>
                       </TouchableOpacity>

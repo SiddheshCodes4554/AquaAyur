@@ -2,6 +2,8 @@
 @import "tailwindcss/preflight.css" layer(base);
 @import "tailwindcss/utilities.css";
 
+@source "./**/*.{js,ts,jsx,tsx}";
+
 @import "nativewind/theme";
 
 @theme {

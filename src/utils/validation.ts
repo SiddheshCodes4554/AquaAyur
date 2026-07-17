@@ -61,8 +61,8 @@ export function validateBiometrics(payload: RawBiometricsPayload): ValidationRes
     const temp = Number(payload.temperature);
     if (isNaN(temp)) {
       errors.push('temperature must be a numeric value');
-    } else if (temp < 30.0 || temp > 45.0) {
-      errors.push(`temperature (${temp}) is out of safe physiological range [30.0, 45.0]`);
+    } else if (temp < 10.0 || temp > 50.0) {
+      errors.push(`temperature (${temp}) is out of valid range [10.0, 50.0]`);
     }
   }
 
