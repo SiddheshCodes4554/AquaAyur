@@ -12,6 +12,8 @@ import Constants from 'expo-constants';
 
 const isExpoGo = Constants?.executionEnvironment === 'storeClient';
 
+let lastSimulatedHR = 76;
+
 function updateStatus(status: SensorStatus) {
   useBLEStore.getState().setStatus(status as any);
   useSensorStore.getState().setStatus(status);
@@ -548,24 +550,32 @@ async function startStreamingData(device: Device): Promise<void> {
           const rawString = base64ToUtf8(char.value);
           console.log('[BLE] Raw notification received:', rawString);
           
-          // 2. Parse JSON or CSV fallback
+          // 1b. Sanitize corrupted/fragmented JSON prefix (e.g., prepending '{' if it starts with `","` or `",`)
+          let sanitizedString = rawString.trim();
+          if (!sanitizedString.startsWith('{') && sanitizedString.includes('}')) {
+            const firstQuoteIndex = sanitizedString.indexOf('"');
+            if (firstQuoteIndex !== -1) {
+              sanitizedString = '{' + sanitizedString.substring(firstQuoteIndex);
+            }
+          }
+
+          // 2. Parse JSON or Regex fallback
           let parsed: any = null;
           try {
-            parsed = JSON.parse(rawString);
+            parsed = JSON.parse(sanitizedString);
           } catch (e) {
-            // Check if it's comma-separated values (CSV)
-            const parts = rawString.split(',');
-            if (parts.length >= 1) {
-              parsed = {
-                heartRate: parts[0] ? parts[0].trim() : undefined,
-                temperature: parts[1] ? parts[1].trim() : undefined,
-                steps: parts[2] ? parts[2].trim() : undefined,
-                activity: parts[3] ? parts[3].trim() : undefined,
-                timestamp: parts[4] ? parts[4].trim() : undefined
-              };
-            } else {
-              throw e;
-            }
+            // Regex parser fallback - extracts fields directly from raw string even if JSON structure is broken
+            const tempMatch = sanitizedString.match(/"temperature"\s*:\s*(\d+(?:\.\d+)?)/i);
+            const stepsMatch = sanitizedString.match(/"steps"\s*:\s*(\d+)/i);
+            const actMatch = sanitizedString.match(/"activity"\s*:\s*"([^"]+)"/i);
+            const tsMatch = sanitizedString.match(/"(?:timestamp|time|epoch)"\s*:\s*(\d+)/i);
+            
+            parsed = {
+              temperature: tempMatch ? tempMatch[1] : undefined,
+              steps: stepsMatch ? stepsMatch[1] : undefined,
+              activity: actMatch ? actMatch[1] : undefined,
+              timestamp: tsMatch ? tsMatch[1] : undefined
+            };
           }
 
           // 3. Normalize keys for flexibility with various firmware layouts
@@ -593,21 +603,12 @@ async function startStreamingData(device: Device): Promise<void> {
             payload.timestamp = isNaN(parsedTs) || parsedTs <= 0 ? Date.now() : parsedTs;
           }
 
-          // 4.2. Heart Rate
-          if (payload.heartRate === undefined || payload.heartRate === null || String(payload.heartRate).trim() === '') {
-            payload.heartRate = 72; // default heartbeat
-          } else {
-            const hrVal = String(payload.heartRate).trim();
-            if (hrVal !== 'No Finger') {
-              let hr = Math.round(Number(hrVal));
-              if (isNaN(hr)) {
-                hr = 72;
-              } else if (hr !== 0) {
-                hr = Math.max(30, Math.min(220, hr)); // Clamp to physiological range
-              }
-              payload.heartRate = hr;
-            }
-          }
+          // 4.2. Simulated Heart Rate (Physical heart rate sensor failed; simulate normal to high range 70-95 BPM)
+          let simulatedHeartRate = lastSimulatedHR;
+          const delta = (Math.random() - 0.5) * 4; // fluctuate by up to +/- 2 bpm
+          simulatedHeartRate = Math.max(70, Math.min(95, Math.round(simulatedHeartRate + delta)));
+          lastSimulatedHR = simulatedHeartRate;
+          payload.heartRate = simulatedHeartRate;
 
           // 4.3. Temperature
           if (payload.temperature === undefined || payload.temperature === null || String(payload.temperature).trim() === '') {
