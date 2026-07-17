@@ -38,7 +38,7 @@ function InitialLayout() {
   const { isLoaded, isSignedIn, userId, getToken, signOut: clerkSignOut } = useAuth();
   const { user } = useUser();
   const { profile, loading, initialized, setClerkSession, clearClerkSession } = useAuthStore();
-  const segments = useSegments();
+  const segments = useSegments() as string[];
 
   // 1. Initial setup for database
   useEffect(() => {
