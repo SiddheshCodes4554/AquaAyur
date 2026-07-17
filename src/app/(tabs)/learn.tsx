@@ -152,8 +152,10 @@ function LessonIllustration({ type }: { type: string }) {
           <Line x1="50" y1="20" x2="50" y2="80" stroke="#34d399" strokeWidth="1" />
           <Line x1="20" y1="50" x2="80" y2="50" stroke="#34d399" strokeWidth="1" />
           {/* Seasons items */}
-          <Circle cx="35" cy="35" r="4" fill="#fbbf24" /> {/* Summer sun */}
-          <Path d="M60 35 L68 35" stroke="#38bdf8" strokeWidth="1.5" /> {/* Winter ice */}
+          {/* Summer sun */}
+          <Circle cx="35" cy="35" r="4" fill="#fbbf24" />
+          {/* Winter ice */}
+          <Path d="M60 35 L68 35" stroke="#38bdf8" strokeWidth="1.5" />
         </Svg>
       );
     case 'sensors':

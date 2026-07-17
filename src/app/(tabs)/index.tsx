@@ -935,17 +935,18 @@ const AyurvedicTwinAvatar = React.memo(function AyurvedicTwinAvatar() {
           <Line x1="150" y1="150" x2="253.9" y2="210" stroke="rgba(96, 124, 100, 0.15)" strokeWidth="1" strokeDasharray="3,3" />
           <Line x1="150" y1="150" x2="46.1" y2="210" stroke="rgba(96, 124, 100, 0.15)" strokeWidth="1" strokeDasharray="3,3" />
           
+          {/* Sage Green Accent */}
           <Polygon
             points={polyPoints}
             fill="url(#mandalaShine)"
-            stroke="#607C64" // Sage Green Accent
+            stroke="#607C64"
             strokeWidth="2"
           />
           
-          {/* Nodes corresponding to Vata, Pitta, Kapha */}
-          <Circle cx="150" cy="30" r="4.5" fill="#5C788A" /> {/* Vata - Slate Blue */}
-          <Circle cx="253.9" cy="210" r="4.5" fill="#C07A65" /> {/* Pitta - Terracotta */}
-          <Circle cx="46.1" cy="210" r="4.5" fill="#607C64" /> {/* Kapha - Sage Green */}
+          {/* Nodes corresponding to Vata (Slate Blue), Pitta (Terracotta), Kapha (Sage Green) */}
+          <Circle cx="150" cy="30" r="4.5" fill="#5C788A" />
+          <Circle cx="253.9" cy="210" r="4.5" fill="#C07A65" />
+          <Circle cx="46.1" cy="210" r="4.5" fill="#607C64" />
 
           <AnimatedG transform={[{ scale: agniPulse }]} origin="150, 150">
             <Circle cx="150" cy="150" r="26" fill="url(#agniFire)" />
