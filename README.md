@@ -145,6 +145,62 @@ To run with native Bluetooth libraries (`react-native-ble-plx`) and connect to r
 
 ---
 
+## 🏗️ System Architecture
+
+AquaAyur features a highly modular, decoupled architecture consisting of an IoT/Simulator hardware interface, a state-driven client application with specialized Ayurvedic intelligence engines, and a remote cloud service layer:
+
+```mermaid
+flowchart TB
+    subgraph Sensors [Hardware & Telemetry]
+        H[ESP32 Wearable Sensors] -->|Bluetooth LE| B[react-native-ble-plx Service]
+        S[BLE Wearable Simulator] -->|Virtual Packets| B
+    end
+
+    subgraph App [AquaAyur Client Application]
+        direction TB
+        subgraph UI [Presentation Layer]
+            U1[Dashboard Tab: Daily Story, Welcome Card]
+            U2[Insights Tab: SVG Trend Charts, Concentric Rings]
+            U3[Learn Tab: Gamified Nodes, Quizzes]
+            U4[Dinacharya Tab: Pranayama Coach, Routines]
+            U5[Coach Tab: AI Ayurvedic Advisor]
+        end
+
+        subgraph Stores [Zustand State Stores]
+            S1[useSensorStore]
+            S2[useTelemetryStore / useSleepStore]
+            S3[useLearnStore / useExperienceStore]
+            S4[useAgniStore / useOjasStore]
+        end
+
+        subgraph Engines [Ayurvedic Intelligence Engines]
+            E1[Daily Story Engine]
+            E2[Predictive Health Engine]
+            E3[Translation Engine]
+            E4[Recommendation Explainer]
+        end
+
+        subgraph Data [Storage & Sync Management]
+            DB1[Local SQLite Database]
+            DB2[Offline Sync Queue]
+        end
+    end
+
+    subgraph Cloud [External & Remote Cloud API Layer]
+        C1[Supabase remote PostgreSQL DB]
+        C2[Groq AI Llama 3 SDK]
+    end
+
+    B --> Stores
+    Stores --> UI
+    UI --> Engines
+    Engines --> Data
+    Data -->|Automatic Sync| C1
+    Engines -->|Meal Analysis & Diagnostic PDF| C2
+```
+
+---
+
 ## 🔄 Offline Sync Architecture
 
 AquaAyur implements a robust offline-first synchronization strategy. Telemetry, hydration, and sleep logs captured offline are stored in a local SQLite queue and dynamically uploaded to Supabase PostgreSQL when internet connectivity is re-established.
