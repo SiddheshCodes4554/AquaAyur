@@ -10,7 +10,8 @@ import {
   Platform,
   KeyboardAvoidingView,
   Animated,
-  Easing
+  Easing,
+  StyleSheet
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +24,7 @@ import { generatePhysicianConsultation, PhysicianConsultation } from '../../serv
 type ConsultationPhase = 'morning' | 'afternoon' | 'evening' | 'weekly' | 'monthly';
 
 export default function CoachScreen() {
-  const { user, profile } = useAuthStore();
+  const { user } = useAuthStore();
   
   const [subTab, setSubTab] = useState<'assessment' | 'chat'>('assessment');
   const [activePhase, setActivePhase] = useState<ConsultationPhase>('morning');
@@ -176,42 +177,46 @@ export default function CoachScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F6F0]" edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <LinearGradient
         colors={['#F8F6F0', '#F2EFE8']}
         style={{ flex: 1 }}
       >
         {/* Header */}
-        <View className="px-5 pt-4 pb-3 border-b border-[#E4E1D8] flex-row justify-between items-center bg-white">
+        <View style={styles.header}>
           <View>
-            <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-widest font-mono">AQUAGURU PHYSICIAN</Text>
-            <Text className="text-[#2E3A2F] text-lg font-serif font-black mt-0.5">Ayurvedic Consultations</Text>
+            <Text style={styles.headerSubtitle}>AQUAGURU PHYSICIAN</Text>
+            <Text style={styles.headerTitle}>Ayurvedic Consultations</Text>
           </View>
-          <View className="w-8 h-8 rounded-full bg-[#F5F2EA] border border-[#E4E1D8] items-center justify-center">
+          <View style={styles.headerIconContainer}>
             <Ionicons name="chatbubble-ellipses-outline" size={16} color="#607C64" />
           </View>
         </View>
 
         {/* Subtab Segment Control */}
-        <View className="flex-row p-1.5 bg-white border-b border-[#E4E1D8]">
+        <View style={styles.tabContainer}>
           <TouchableOpacity
             onPress={() => setSubTab('assessment')}
-            className={`flex-1 py-2.5 rounded-xl items-center justify-center ${subTab === 'assessment' ? 'bg-[#7D9C83]' : 'opacity-60'}`}
+            style={[styles.tabButton, subTab === 'assessment' ? styles.tabButtonActive : styles.tabButtonInactive]}
           >
-            <Text className={`text-xs font-serif font-black ${subTab === 'assessment' ? 'text-white' : 'text-[#607C64]'}`}>Physician Assessment</Text>
+            <Text style={[styles.tabText, subTab === 'assessment' ? styles.tabTextActive : styles.tabTextInactive]}>
+              Physician Assessment
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setSubTab('chat')}
-            className={`flex-1 py-2.5 rounded-xl items-center justify-center ${subTab === 'chat' ? 'bg-[#7D9C83]' : 'opacity-60'}`}
+            style={[styles.tabButton, subTab === 'chat' ? styles.tabButtonActive : styles.tabButtonInactive]}
           >
-            <Text className={`text-xs font-serif font-black ${subTab === 'chat' ? 'text-white' : 'text-[#607C64]'}`}>AquaGuru Chat</Text>
+            <Text style={[styles.tabText, subTab === 'chat' ? styles.tabTextActive : styles.tabTextInactive]}>
+              AquaGuru Chat
+            </Text>
           </TouchableOpacity>
         </View>
 
         {subTab === 'assessment' ? (
-          <>
+          <View style={{ flex: 1 }}>
             {/* Dynamic Consult Phase Tab Selectors */}
-            <View className="px-4 py-3 bg-[#F5F2EA]/45 border-b border-[#E4E1D8]">
+            <View style={styles.phaseSelectorContainer}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 10 }} className="flex-row">
                 {(['morning', 'afternoon', 'evening', 'weekly', 'monthly'] as ConsultationPhase[]).map((phase) => {
                   const isSelected = activePhase === phase;
@@ -220,13 +225,9 @@ export default function CoachScreen() {
                     <TouchableOpacity
                       key={phase}
                       onPress={() => setActivePhase(phase)}
-                      className={`px-4 py-2 rounded-xl mr-2 border ${
-                        isSelected 
-                          ? 'bg-[#7D9C83] border-[#607C64]' 
-                          : 'bg-white border-[#E4E1D8]'
-                      }`}
+                      style={[styles.phaseButton, isSelected ? styles.phaseButtonActive : styles.phaseButtonInactive]}
                     >
-                      <Text className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-[#607C64]'}`}>
+                      <Text style={[styles.phaseButtonText, isSelected ? styles.phaseButtonTextActive : styles.phaseButtonTextInactive]}>
                         {label}
                       </Text>
                     </TouchableOpacity>
@@ -235,48 +236,48 @@ export default function CoachScreen() {
               </ScrollView>
             </View>
 
-            <ScrollView className="flex-1 px-5 pt-4" contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flex: 1, paddingHorizontal: 20, paddingTop: 16 }} contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
               {loading ? (
-                <View className="flex-1 py-20 items-center justify-center">
+                <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color="#607C64" />
-                  <Text className="text-[#607C64] text-xs font-medium mt-4 font-mono">Compiling physician's assessment...</Text>
+                  <Text style={styles.loadingText}>Compiling physician's assessment...</Text>
                 </View>
               ) : consultation ? (
-                <View className="space-y-5">
+                <View style={{ gap: 16 }}>
                   
                   {/* Prescription Sheet Card */}
-                  <View className="bg-white border border-[#E4E1D8] p-5 rounded-3xl relative overflow-hidden shadow-sm">
+                  <View style={styles.card}>
                     {/* Header */}
-                    <View className="border-b border-[#E4E1D8] pb-3.5 mb-4 flex-row justify-between items-start">
+                    <View style={styles.cardHeader}>
                       <View>
-                        <Text className="text-[#2E3A2F] text-base font-extrabold font-serif">{getPhaseTitle(consultation.phase)}</Text>
-                        <Text className="text-slate-400 text-[10px] mt-0.5 font-mono">B.A.M.S. Certified Advisor</Text>
+                        <Text style={styles.cardTitle}>{getPhaseTitle(consultation.phase)}</Text>
+                        <Text style={styles.cardSubtitle}>B.A.M.S. Certified Advisor</Text>
                       </View>
-                      <View className="bg-[#F5F2EA] border border-[#E4E1D8] px-2.5 py-0.5 rounded-full">
-                        <Text className="text-[#607C64] text-[8px] font-mono uppercase">State: {consultation.dominantDoshaLabel}</Text>
+                      <View style={styles.pill}>
+                        <Text style={styles.pillText}>State: {consultation.dominantDoshaLabel}</Text>
                       </View>
                     </View>
 
                     {/* Assessment text */}
-                    <View className="mb-5">
-                      <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-widest mb-1.5 font-mono">Physician's Assessment</Text>
-                      <Text className="text-[#2E3A2F] text-xs italic leading-relaxed pl-3.5 border-l-2 border-[#7D9C83] font-serif">
+                    <View style={{ marginBottom: 20 }}>
+                      <Text style={styles.cardSectionLabel}>Physician's Assessment</Text>
+                      <Text style={styles.assessmentQuote}>
                         "{consultation.assessment}"
                       </Text>
                     </View>
 
                     {/* Prescriptions Grid */}
-                    <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-widest mb-3 font-mono">Therapeutic Prescriptions</Text>
-                    <View className="space-y-3">
+                    <Text style={styles.cardSectionLabel}>Therapeutic Prescriptions</Text>
+                    <View style={{ gap: 12 }}>
                       {consultation.prescriptions.map((pres, idx) => (
-                        <View key={idx} className="bg-[#F8F6F0] border border-[#E4E1D8] p-4 rounded-2xl">
-                          <View className="flex-row justify-between items-center mb-1.5">
-                            <Text className="text-[#2E3A2F] text-xs font-bold font-serif">{pres.instruction}</Text>
-                            <View className="bg-[#E4E1D8]/60 border border-[#E4E1D8] px-2 py-0.5 rounded">
-                              <Text className="text-[#607C64] text-[8px] font-bold uppercase">{pres.category}</Text>
+                        <View key={idx} style={styles.prescriptionItem}>
+                          <View style={styles.prescriptionHeader}>
+                            <Text style={styles.prescriptionInstruction}>{pres.instruction}</Text>
+                            <View style={styles.prescriptionCategory}>
+                              <Text style={styles.prescriptionCategoryText}>{pres.category}</Text>
                             </View>
                           </View>
-                          <Text className="text-slate-500 text-[10px] leading-relaxed">
+                          <Text style={styles.prescriptionRationale}>
                             Rationale: {pres.rationale}
                           </Text>
                         </View>
@@ -284,24 +285,24 @@ export default function CoachScreen() {
                     </View>
 
                     {/* Diagnostic Indexes used */}
-                    <View className="mt-5 pt-4 border-t border-[#E4E1D8] flex-row justify-between items-center">
+                    <View style={styles.cardFooter}>
                       <View>
-                        <Text className="text-slate-400 text-[8px] font-mono uppercase">Digestion Index: {consultation.agniClassification}</Text>
-                        <Text className="text-slate-400 text-[8px] font-mono uppercase mt-0.5">Immunity Index: {consultation.ojasClassification}</Text>
+                        <Text style={styles.footerMetric}>Digestion Index: {consultation.agniClassification}</Text>
+                        <Text style={styles.footerMetric}>Immunity Index: {consultation.ojasClassification}</Text>
                       </View>
                       <Ionicons name="shield-checkmark-outline" size={16} color="#607C64" />
                     </View>
                   </View>
 
                   {/* Clinical Evidence badges */}
-                  <View className="bg-white border border-[#E4E1D8] p-5 rounded-3xl shadow-sm">
-                    <Text className="text-[#607C64] text-[9px] uppercase font-bold tracking-wider mb-3 font-mono">Referenced Biometrics</Text>
-                    <View className="flex-row flex-wrap">
+                  <View style={styles.card}>
+                    <Text style={styles.cardSectionLabel}>Referenced Biometrics</Text>
+                    <View style={styles.badgeContainer}>
                       {consultation.vitalMetricsUsed.map((metric, idx) => (
-                        <View key={idx} className="bg-[#F8F6F0] border border-[#E4E1D8] px-3 py-2 rounded-xl mr-2 mb-2 flex-row items-center">
-                          <View className="w-1.5 h-1.5 rounded-full bg-[#607C64] mr-2" />
-                          <Text className="text-[#607C64] text-[10px] font-medium mr-1.5">{metric.label}:</Text>
-                          <Text className="text-[#2E3A2F] text-[10px] font-bold font-mono">{metric.value}</Text>
+                        <View key={idx} style={styles.badge}>
+                          <View style={styles.badgeDot} />
+                          <Text style={styles.badgeLabel}>{metric.label}:</Text>
+                          <Text style={styles.badgeValue}>{metric.value}</Text>
                         </View>
                       ))}
                     </View>
@@ -310,27 +311,27 @@ export default function CoachScreen() {
                   {/* Ask Follow Up Button */}
                   <TouchableOpacity
                     onPress={() => setSubTab('chat')}
-                    className="bg-[#607C64] py-4 rounded-2xl flex-row justify-center items-center active:bg-[#7D9C83] shadow-sm mb-6"
+                    style={styles.ctaButton}
                   >
                     <Ionicons name="chatbubble-ellipses-outline" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-                    <Text className="text-white font-black text-xs uppercase tracking-wider">Ask Follow-up Question</Text>
+                    <Text style={styles.ctaButtonText}>Ask Follow-up Question</Text>
                   </TouchableOpacity>
 
                 </View>
               ) : (
-                <View className="py-20 items-center justify-center">
-                  <Text className="text-slate-400 text-xs italic font-serif">No consultation records available today.</Text>
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.emptyText}>No consultation records available today.</Text>
                 </View>
               )}
             </ScrollView>
-          </>
+          </View>
         ) : (
-          <View className="flex-1">
+          <View style={{ flex: 1 }}>
             {/* Chat messages */}
             <ScrollView 
               ref={scrollViewRef}
-              className="flex-1 px-5 pt-4"
-              contentContainerStyle={{ paddingBottom: 110 }}
+              style={{ flex: 1, paddingHorizontal: 20, paddingTop: 16 }}
+              contentContainerStyle={{ paddingBottom: 120 }}
               showsVerticalScrollIndicator={false}
             >
               {chatMessages.map((msg, idx) => {
@@ -338,17 +339,16 @@ export default function CoachScreen() {
                 return (
                   <View 
                     key={idx} 
-                    className={`mb-4 flex-row ${isUser ? 'justify-end' : 'justify-start'}`}
+                    style={[styles.messageRow, isUser ? { justifyContent: 'flex-end' } : { justifyContent: 'flex-start' }]}
                   >
                     <View 
-                      className={`max-w-[85%] p-4 rounded-2xl border ${
-                        isUser 
-                          ? 'bg-[#7D9C83] border-[#607C64] rounded-tr-none' 
-                          : 'bg-white border-[#E4E1D8] rounded-tl-none'
-                      }`}
+                      style={[
+                        styles.messageBubble, 
+                        isUser ? styles.userBubble : styles.doctorBubble
+                      ]}
                     >
                       {isUser ? (
-                        <Text className="text-white font-bold text-xs leading-relaxed font-sans">
+                        <Text style={styles.userMessageText}>
                           {msg.message_text}
                         </Text>
                       ) : (
@@ -364,7 +364,7 @@ export default function CoachScreen() {
 
             {/* Suggestion Chips Panel */}
             {inputText.trim() === '' && (
-              <View className="px-4 py-2 border-t border-[#E4E1D8] bg-white">
+              <View style={styles.chipsContainer}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
                   {[
                     "Explain Kapha pacifying herbs.",
@@ -375,9 +375,9 @@ export default function CoachScreen() {
                     <TouchableOpacity
                       key={idx}
                       onPress={() => setInputText(sug)}
-                      className="bg-[#F8F6F0] border border-[#E4E1D8] px-3.5 py-1.5 rounded-full mr-2 active:bg-[#E4E1D8]"
+                      style={styles.chip}
                     >
-                      <Text className="text-[#607C64] text-[9px] font-bold font-mono">{sug}</Text>
+                      <Text style={styles.chipText}>{sug}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -386,23 +386,22 @@ export default function CoachScreen() {
 
             {/* Input section */}
             <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
               keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-              className="border-t border-[#E4E1D8] bg-[#F2EFE8] p-4 flex-row items-center"
+              style={styles.inputContainer}
             >
               <TextInput
                 value={inputText}
                 onChangeText={setInputText}
                 placeholder="Ask for adjustments, herbs, guidelines..."
                 placeholderTextColor="#8C958E"
-                style={{ flex: 1, marginRight: 8 }}
-                className="h-12 bg-white border border-[#E4E1D8] rounded-xl px-4 text-[#2E3A2F] text-xs font-sans"
+                style={styles.textInput}
               />
               
               {/* Voice Intake Toggle button */}
               <TouchableOpacity
                 onPress={handleTriggerVoiceSpeech}
-                className="w-12 h-12 rounded-xl bg-white border border-[#E4E1D8] justify-center items-center active:bg-slate-100 mr-2"
+                style={styles.iconButton}
               >
                 <Ionicons name="mic-outline" size={20} color="#607C64" />
               </TouchableOpacity>
@@ -410,7 +409,7 @@ export default function CoachScreen() {
               <TouchableOpacity
                 onPress={handleSendMessage}
                 disabled={thinking || !inputText.trim()}
-                className="w-12 h-12 rounded-xl bg-[#607C64] justify-center items-center active:bg-[#7D9C83] disabled:bg-white disabled:border disabled:border-[#E4E1D8]"
+                style={[styles.sendButton, (!inputText.trim() || thinking) ? styles.sendButtonDisabled : null]}
               >
                 <Ionicons name="send" size={16} color={inputText.trim() ? '#FFFFFF' : '#8C958E'} />
               </TouchableOpacity>
@@ -425,15 +424,15 @@ export default function CoachScreen() {
           animationType="fade"
           onRequestClose={() => setVoiceModeActive(false)}
         >
-          <View className="flex-1 bg-black/60 items-center justify-center">
-            <View className="w-72 bg-white border border-[#E4E1D8] p-8 rounded-3xl items-center shadow-2xl">
-              <Text className="text-[#607C64] text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Voice Consultation</Text>
-              <Text className="text-[#2E3A2F] text-base font-serif font-bold text-center px-4 leading-normal mb-8">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalSubtitle}>Voice Consultation</Text>
+              <Text style={styles.modalTitle}>
                 Speak your symptoms or wellness questions...
               </Text>
 
               {/* Pulsing Mic Ring */}
-              <View className="w-24 h-24 items-center justify-center mb-8 relative">
+              <View style={styles.micContainer}>
                 <Animated.View 
                   style={{
                     transform: [{ scale: voiceWaveAnim }],
@@ -444,19 +443,19 @@ export default function CoachScreen() {
                 />
                 <TouchableOpacity
                   onPress={toggleVoiceModeOff}
-                  className="w-16 h-16 rounded-full bg-[#607C64] justify-center items-center active:bg-[#7D9C83] shadow"
+                  style={styles.micCircle}
                 >
                   <Ionicons name="mic" size={28} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
 
-              <Text className="text-slate-400 text-[9px] text-center font-mono uppercase tracking-widest">Listening... Tap Mic to Stop</Text>
+              <Text style={styles.modalFooterText}>Listening... Tap Mic to Stop</Text>
               
               <TouchableOpacity
                 onPress={() => setVoiceModeActive(false)}
-                className="mt-6 border border-red-500/20 bg-red-500/5 px-6 py-2.5 rounded-full active:bg-red-500/10"
+                style={styles.cancelBtn}
               >
-                <Text className="text-red-500 font-bold text-xs">Cancel</Text>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -483,7 +482,7 @@ const DoctorMessageContent = React.memo(function DoctorMessageContent({ text = '
   const lines = mainText.split('\n');
 
   return (
-    <View className="space-y-3">
+    <View style={{ gap: 10 }}>
       <View>
         {lines.map((line, idx) => {
           const trimmed = line.trim();
@@ -494,33 +493,33 @@ const DoctorMessageContent = React.memo(function DoctorMessageContent({ text = '
             const boldMatch = content.match(/^\*\*([^*]+)\*\*:\s*(.*)/);
             if (boldMatch) {
               return (
-                <View key={idx} className="bg-[#F8F6F0] border border-[#E4E1D8] p-3 rounded-2xl my-1 flex-row items-start">
-                  <View className="w-1.5 h-1.5 rounded-full bg-[#607C64] mt-1.5 mr-2.5" />
-                  <View className="flex-1">
-                    <Text className="text-[#2E3A2F] text-xs font-bold font-serif">{boldMatch[1]}</Text>
-                    <Text className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{boldMatch[2]}</Text>
+                <View key={idx} style={styles.richBulletItem}>
+                  <View style={styles.bulletDot} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.bulletTitle}>{boldMatch[1]}</Text>
+                    <Text style={styles.bulletDesc}>{boldMatch[2]}</Text>
                   </View>
                 </View>
               );
             }
             return (
-              <View key={idx} className="bg-[#F8F6F0] border border-[#E4E1D8] p-2.5 rounded-xl my-0.5 flex-row items-center">
+              <View key={idx} style={styles.simpleBulletItem}>
                 <Ionicons name="sparkles" size={10} color="#607C64" style={{ marginRight: 8 }} />
-                <Text className="text-slate-655 text-xs flex-1 leading-relaxed">{content}</Text>
+                <Text style={styles.simpleBulletText}>{content}</Text>
               </View>
             );
           }
 
           if (trimmed.startsWith('###')) {
             return (
-              <Text key={idx} className="text-[#2E3A2F] text-sm font-serif font-black mt-2.5 mb-1">
+              <Text key={idx} style={styles.sectionHeader}>
                 {trimmed.replace(/###/g, '').trim()}
               </Text>
             );
           }
 
           return (
-            <Text key={idx} className="text-[#2E3A2F] text-xs leading-relaxed mb-1.5 font-sans">
+            <Text key={idx} style={styles.normalText}>
               {trimmed}
             </Text>
           );
@@ -528,37 +527,37 @@ const DoctorMessageContent = React.memo(function DoctorMessageContent({ text = '
       </View>
 
       {(bpmMatches || tempMatches) && (
-        <View className="bg-[#F8F6F0] border border-[#E4E1D8] p-4.5 rounded-2xl flex-row justify-between items-center my-2">
+        <View style={styles.biometricReferenceCard}>
           <View>
-            <Text className="text-[#607C64] text-[8px] uppercase font-bold tracking-widest font-mono">Biometric References</Text>
+            <Text style={styles.biometricHeader}>Biometric References</Text>
             {bpmMatches && (
-              <Text className="text-[#2E3A2F] text-xs font-bold font-mono mt-1">Heart Rate: {bpmMatches[1]} BPM</Text>
+              <Text style={styles.biometricValue}>Heart Rate: {bpmMatches[1]} BPM</Text>
             )}
             {tempMatches && (
-              <Text className="text-[#2E3A2F] text-xs font-bold font-mono mt-0.5">Skin Temp: {tempMatches[1]} °C</Text>
+              <Text style={styles.biometricValue}>Skin Temp: {tempMatches[1]} °C</Text>
             )}
           </View>
-          <View className="flex-row items-end space-x-1.5 pr-2">
-            <View className="w-1 bg-[#607C64]/20 h-4 rounded-full" />
-            <View className="w-1 bg-[#607C64]/40 h-6 rounded-full" />
-            <View className="w-1 bg-[#607C64]/60 h-8 rounded-full" />
-            <View className="w-1 bg-[#607C64]/80 h-5 rounded-full" />
-            <View className="w-1 bg-[#607C64] h-7 rounded-full" />
+          <View style={styles.biometricVisualizer}>
+            <View style={[styles.visualBar, { height: 16, opacity: 0.3 }]} />
+            <View style={[styles.visualBar, { height: 24, opacity: 0.5 }]} />
+            <View style={[styles.visualBar, { height: 32, opacity: 0.7 }]} />
+            <View style={[styles.visualBar, { height: 20, opacity: 0.9 }]} />
+            <View style={[styles.visualBar, { height: 28 }]} />
           </View>
         </View>
       )}
 
       {sourceText ? (
-        <View className="flex-row items-center border-t border-[#E4E1D8] pt-2.5 mt-2">
+        <View style={styles.footerSourceContainer}>
           <Ionicons name="document-text-outline" size={10} color="#607C64" />
-          <Text className="text-[#607C64]/60 text-[9px] font-serif font-bold italic ml-1">
+          <Text style={styles.footerSourceText}>
             Source: {sourceText}
           </Text>
         </View>
       ) : (
-        <View className="flex-row items-center border-t border-[#E4E1D8] pt-2.5 mt-2">
+        <View style={styles.footerSourceContainer}>
           <Ionicons name="shield-checkmark" size={10} color="#607C64" />
-          <Text className="text-[#607C64]/50 text-[9px] font-mono uppercase tracking-widest ml-1">
+          <Text style={styles.footerVerifyText}>
             Grounded Ayurvedic Knowledge Base
           </Text>
         </View>
@@ -579,15 +578,626 @@ const WellnessTypingIndicator = React.memo(function WellnessTypingIndicator() {
   }, []);
 
   return (
-    <View className="flex-row justify-start mb-4">
-      <View className="bg-white border border-[#E4E1D8] p-4 rounded-3xl rounded-tl-none flex-row items-center shadow-sm">
+    <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 16 }}>
+      <View style={styles.typingBubble}>
         <Animated.View style={{ opacity: pulseAnim }}>
           <Ionicons name="leaf-outline" size={14} color="#607C64" />
         </Animated.View>
-        <Text className="text-[#607C64] text-[10px] font-bold tracking-wider font-mono ml-2.5 uppercase">
+        <Text style={styles.typingText}>
           Guru formulating response...
         </Text>
       </View>
     </View>
   );
+});
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F8F6F0'
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderColor: '#E4E1D8',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF'
+  },
+  headerSubtitle: {
+    color: '#607C64',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
+  },
+  headerTitle: {
+    color: '#2E3A2F',
+    fontSize: 18,
+    fontWeight: '900',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    marginTop: 2
+  },
+  headerIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F5F2EA',
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    padding: 6,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderColor: '#E4E1D8'
+  },
+  tabButton: {
+    flex: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10
+  },
+  tabButtonActive: {
+    backgroundColor: '#7D9C83'
+  },
+  tabButtonInactive: {
+    opacity: 0.6
+  },
+  tabText: {
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontWeight: '900'
+  },
+  tabTextActive: {
+    color: '#FFFFFF'
+  },
+  tabTextInactive: {
+    color: '#607C64'
+  },
+  phaseSelectorContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FBF9F4',
+    borderBottomWidth: 1,
+    borderColor: '#E4E1D8'
+  },
+  phaseButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginRight: 8,
+    borderWidth: 1
+  },
+  phaseButtonActive: {
+    backgroundColor: '#7D9C83',
+    borderColor: '#607C64'
+  },
+  phaseButtonInactive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E4E1D8'
+  },
+  phaseButtonText: {
+    fontSize: 10,
+    fontWeight: '700'
+  },
+  phaseButtonTextActive: {
+    color: '#FFFFFF'
+  },
+  phaseButtonTextInactive: {
+    color: '#607C64'
+  },
+  loadingContainer: {
+    flex: 1,
+    paddingVertical: 80,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  loadingText: {
+    color: '#607C64',
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginTop: 16
+  },
+  emptyText: {
+    color: '#8C958E',
+    fontSize: 12,
+    fontStyle: 'italic',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    textAlign: 'center'
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    padding: 20,
+    borderRadius: 24,
+    shadowColor: '#E4E1D8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 16
+  },
+  cardHeader: {
+    borderBottomWidth: 1,
+    borderColor: '#E4E1D8',
+    paddingBottom: 14,
+    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start'
+  },
+  cardTitle: {
+    color: '#2E3A2F',
+    fontSize: 15,
+    fontWeight: '900',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif'
+  },
+  cardSubtitle: {
+    color: '#8C958E',
+    fontSize: 10,
+    marginTop: 2,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
+  },
+  pill: {
+    backgroundColor: '#F5F2EA',
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 99
+  },
+  pillText: {
+    color: '#607C64',
+    fontSize: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: '700'
+  },
+  cardSectionLabel: {
+    color: '#607C64',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginBottom: 6,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
+  },
+  assessmentQuote: {
+    color: '#2E3A2F',
+    fontSize: 12,
+    fontStyle: 'italic',
+    lineHeight: 18,
+    paddingLeft: 14,
+    borderLeftWidth: 2,
+    borderColor: '#7D9C83',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif'
+  },
+  prescriptionItem: {
+    backgroundColor: '#F8F6F0',
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    padding: 14,
+    borderRadius: 16
+  },
+  prescriptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6
+  },
+  prescriptionInstruction: {
+    color: '#2E3A2F',
+    fontSize: 12,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    flex: 1,
+    marginRight: 8
+  },
+  prescriptionCategory: {
+    backgroundColor: '#E4E1D8',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4
+  },
+  prescriptionCategoryText: {
+    color: '#607C64',
+    fontSize: 8,
+    fontWeight: '700'
+  },
+  prescriptionRationale: {
+    color: '#8C958E',
+    fontSize: 10,
+    lineHeight: 14
+  },
+  cardFooter: {
+    marginTop: 20,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderColor: '#E4E1D8',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  footerMetric: {
+    color: '#8C958E',
+    fontSize: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap'
+  },
+  badge: {
+    backgroundColor: '#F8F6F0',
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginRight: 8,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  badgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#607C64',
+    marginRight: 8
+  },
+  badgeLabel: {
+    color: '#607C64',
+    fontSize: 10,
+    fontWeight: '500',
+    marginRight: 6
+  },
+  badgeValue: {
+    color: '#2E3A2F',
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
+  },
+  ctaButton: {
+    backgroundColor: '#607C64',
+    paddingVertical: 14,
+    borderRadius: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#607C64',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 100
+  },
+  ctaButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2
+  },
+  messageRow: {
+    flexDirection: 'row',
+    marginBottom: 16
+  },
+  messageBubble: {
+    maxWidth: '85%',
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1
+  },
+  userBubble: {
+    backgroundColor: '#7D9C83',
+    borderColor: '#607C64',
+    borderTopRightRadius: 0
+  },
+  doctorBubble: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E4E1D8',
+    borderTopLeftRadius: 0
+  },
+  userMessageText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+    lineHeight: 18
+  },
+  chipsContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderColor: '#E4E1D8',
+    backgroundColor: '#FFFFFF'
+  },
+  chip: {
+    backgroundColor: '#F8F6F0',
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 99,
+    marginRight: 8
+  },
+  chipText: {
+    color: '#607C64',
+    fontSize: 9,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
+  },
+  inputContainer: {
+    borderTopWidth: 1,
+    borderColor: '#E4E1D8',
+    backgroundColor: '#F2EFE8',
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: Platform.OS === 'ios' ? 96 : 88
+  },
+  textInput: {
+    flex: 1,
+    height: 48,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    color: '#2E3A2F',
+    fontSize: 12,
+    marginRight: 8
+  },
+  iconButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8
+  },
+  sendButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#607C64',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E1D8'
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  modalContent: {
+    width: 280,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    padding: 24,
+    borderRadius: 24,
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5
+  },
+  modalSubtitle: {
+    color: '#607C64',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginBottom: 8
+  },
+  modalTitle: {
+    color: '#2E3A2F',
+    fontSize: 15,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24
+  },
+  micContainer: {
+    width: 80,
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    position: 'relative'
+  },
+  micCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#607C64',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2
+  },
+  modalFooterText: {
+    color: '#8C958E',
+    fontSize: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    letterSpacing: 1.2,
+    textAlign: 'center'
+  },
+  cancelBtn: {
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    backgroundColor: '#F8F6F0',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 99
+  },
+  cancelBtnText: {
+    color: '#607C64',
+    fontWeight: '700',
+    fontSize: 10
+  },
+  richBulletItem: {
+    backgroundColor: '#F8F6F0',
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    padding: 10,
+    borderRadius: 14,
+    marginVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'flex-start'
+  },
+  bulletDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#607C64',
+    marginTop: 5,
+    marginRight: 8
+  },
+  bulletTitle: {
+    color: '#2E3A2F',
+    fontSize: 11,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif'
+  },
+  bulletDesc: {
+    color: '#8C958E',
+    fontSize: 10,
+    marginTop: 2,
+    lineHeight: 14
+  },
+  simpleBulletItem: {
+    backgroundColor: '#F8F6F0',
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    padding: 8,
+    borderRadius: 10,
+    marginVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  simpleBulletText: {
+    color: '#8C958E',
+    fontSize: 10,
+    flex: 1,
+    lineHeight: 14
+  },
+  sectionHeader: {
+    color: '#2E3A2F',
+    fontSize: 13,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontWeight: '900',
+    marginTop: 10,
+    marginBottom: 4
+  },
+  normalText: {
+    color: '#2E3A2F',
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 6,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif'
+  },
+  biometricReferenceCard: {
+    backgroundColor: '#F8F6F0',
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    padding: 12,
+    borderRadius: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 6
+  },
+  biometricHeader: {
+    color: '#607C64',
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
+  },
+  biometricValue: {
+    color: '#2E3A2F',
+    fontSize: 11,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginTop: 2
+  },
+  biometricVisualizer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 4,
+    paddingRight: 6
+  },
+  visualBar: {
+    width: 3,
+    backgroundColor: '#607C64',
+    borderRadius: 2
+  },
+  footerSourceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderColor: '#E4E1D8',
+    paddingTop: 8,
+    marginTop: 8
+  },
+  footerSourceText: {
+    color: '#607C64',
+    fontSize: 8,
+    fontStyle: 'italic',
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    marginLeft: 4
+  },
+  footerVerifyText: {
+    color: '#607C64',
+    fontSize: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: '500',
+    letterSpacing: 1,
+    marginLeft: 4
+  },
+  typingBubble: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E1D8',
+    padding: 12,
+    borderRadius: 16,
+    borderTopLeftRadius: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#E4E1D8',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1
+  },
+  typingText: {
+    color: '#607C64',
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 1,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginLeft: 8,
+    textTransform: 'uppercase'
+  }
 });
